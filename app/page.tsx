@@ -180,7 +180,7 @@ export default function Home() {
                 </div>
                 <h3 className="font-semibold text-[#1E2B3C] text-lg mb-2 leading-tight">Your booking software, connected</h3>
                 <p className="text-sm text-gray-500 leading-relaxed flex-1">
-                  The widget fires a JavaScript event the moment a customer adds an item. Catch it in InflatableOffice, HireHop, or any platform with a custom JS integration.
+                  The widget fires a JavaScript event the moment a customer adds an item. Catch it in InflatableOffice, Go HighLevel, or any platform with a custom JS integration.
                 </p>
                 <div className="mt-5 pt-4 border-t border-gray-100 flex items-center gap-1.5">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E8A020" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -201,7 +201,7 @@ export default function Home() {
                 </div>
                 <h3 className="font-semibold text-[#1E2B3C] text-lg mb-2 leading-tight">Drive traffic to your booking page</h3>
                 <p className="text-sm text-gray-500 leading-relaxed flex-1">
-                  Every recommendation card shows an &quot;Inquire&quot; button that links straight to your existing contact or booking form. Zero technical integration needed.
+                  Every recommendation card shows an &quot;Inquire&quot; button that links straight to your Go HighLevel form, booking page, or any contact URL. Zero technical integration needed.
                 </p>
                 <div className="mt-5 pt-4 border-t border-gray-100 flex items-center gap-1.5">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E8A020" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
