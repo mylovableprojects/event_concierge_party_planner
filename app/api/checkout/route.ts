@@ -2,12 +2,15 @@ import { NextRequest } from 'next/server'
 import Stripe from 'stripe'
 import { getCompanyConfig } from '@/lib/inventory'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
-
 const APP_URL = 'https://concierge.thepartyrentaltoolkit.com'
 const PRICE_ID = 'price_1TDRImGobXm0JvyhYs14SOti'
 
 export async function POST(request: NextRequest) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('STRIPE_SECRET_KEY is not set')
+    return Response.json({ error: 'Payment not configured' }, { status: 500 })
+  }
+
   try {
     const { companyId } = await request.json() as { companyId: string }
     if (!companyId) {
@@ -19,6 +22,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Company not found' }, { status: 404 })
     }
 
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: PRICE_ID, quantity: 1 }],

@@ -2,9 +2,11 @@ import { NextRequest } from 'next/server'
 import Stripe from 'stripe'
 import { getCompanyConfig, saveCompanyConfig } from '@/lib/inventory'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
-
 export async function POST(request: NextRequest) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return Response.json({ error: 'Payment not configured' }, { status: 500 })
+  }
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
   const body = await request.text()
   const sig = request.headers.get('stripe-signature')
 
