@@ -97,7 +97,7 @@ export default function Home() {
                   <svg key={i} width="12" height="12" viewBox="0 0 24 24" fill="#E8A020"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                 ))}
               </span>
-              <span className="text-xs font-semibold text-[#1E2B3C]">Trusted by 200+ party rental companies</span>
+              <span className="text-xs font-semibold text-[#1E2B3C]">Built for party rental companies</span>
             </div>
 
             {/* Headline */}
@@ -264,7 +264,7 @@ export default function Home() {
             <div className="text-center mb-16">
               <p className="text-[#E8A020] text-sm font-semibold tracking-widest uppercase mb-3">Simple setup</p>
               <h2 className="font-display text-4xl sm:text-5xl font-bold text-white leading-tight">
-                Live in under 10 minutes
+                Simple setup, up and running fast
               </h2>
             </div>
 
@@ -382,7 +382,7 @@ export default function Home() {
               Ready to turn every visitor into a potential booking?
             </h2>
             <p className="text-gray-500 text-lg mb-10 leading-relaxed">
-              Set up takes less than 10 minutes. Upload your inventory, grab your embed code, and your AI rental concierge is live.
+              Upload your inventory, grab your embed code, and your AI rental concierge is live on your website.
             </p>
             <a
               href="/signup"
