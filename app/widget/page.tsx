@@ -161,12 +161,20 @@ function WidgetContent() {
 
   const cartTotal = inventory.filter(i => cart.has(i.id)).reduce((sum, i) => sum + i.price, 0)
 
-  // Collect interested items from cart + any items seen in last assistant message
+  // Collect interested items — cart if available, otherwise last AI recommendations
   const getInterestedItems = () => {
-    const allItems = [...inventory]
-    return allItems
-      .filter(i => cart.has(i.id))
-      .map(i => ({ name: i.name, price: i.price }))
+    if (cart.size > 0) {
+      return inventory
+        .filter(i => cart.has(i.id))
+        .map(i => ({ name: i.name, price: i.price }))
+    }
+    // Browse Only (or empty cart): use items from the last assistant message
+    const lastAssistant = [...messages].reverse().find(m => m.type === 'assistant') as AssistantMessage | undefined
+    if (lastAssistant) {
+      return [...lastAssistant.recommendations, ...lastAssistant.upsells]
+        .map(i => ({ name: i.name, price: i.price }))
+    }
+    return []
   }
 
   // Build event description from conversation
