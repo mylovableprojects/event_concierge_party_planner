@@ -18,6 +18,10 @@ export default function ManageClient({ companies: initial }: Props) {
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
   const [createSuccess, setCreateSuccess] = useState('')
+  const [resetId, setResetId] = useState<string | null>(null)
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetSaving, setResetSaving] = useState(false)
+  const [resetMsg, setResetMsg] = useState('')
 
   const filtered = companies.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -37,6 +41,25 @@ export default function ManageClient({ companies: initial }: Props) {
       )
     }
     setToggling(null)
+  }
+
+  async function saveResetPassword(companyId: string) {
+    setResetSaving(true)
+    setResetMsg('')
+    const res = await fetch('/api/manage/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ companyId, password: resetPassword }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setResetMsg('Password updated.')
+      setResetPassword('')
+      setTimeout(() => { setResetId(null); setResetMsg('') }, 1500)
+    } else {
+      setResetMsg(data.error || 'Something went wrong')
+    }
+    setResetSaving(false)
   }
 
   async function createAccount(e: React.FormEvent) {
@@ -177,19 +200,56 @@ export default function ManageClient({ companies: initial }: Props) {
                 </span>
               </td>
               <td style={{ padding: '12px 12px' }}>
-                <button
-                  onClick={() => toggle(c.id, !!c.subscriptionActive)}
-                  disabled={toggling === c.id}
-                  style={{
-                    padding: '6px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                    border: 'none',
-                    background: c.subscriptionActive ? '#fee2e2' : '#dcfce7',
-                    color: c.subscriptionActive ? '#dc2626' : '#16a34a',
-                    opacity: toggling === c.id ? 0.6 : 1,
-                  }}
-                >
-                  {toggling === c.id ? '…' : c.subscriptionActive ? 'Revoke' : 'Grant Free'}
-                </button>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => toggle(c.id, !!c.subscriptionActive)}
+                    disabled={toggling === c.id}
+                    style={{
+                      padding: '6px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      border: 'none',
+                      background: c.subscriptionActive ? '#fee2e2' : '#dcfce7',
+                      color: c.subscriptionActive ? '#dc2626' : '#16a34a',
+                      opacity: toggling === c.id ? 0.6 : 1,
+                    }}
+                  >
+                    {toggling === c.id ? '…' : c.subscriptionActive ? 'Revoke' : 'Grant Free'}
+                  </button>
+                  <button
+                    onClick={() => { setResetId(resetId === c.id ? null : c.id); setResetPassword(''); setResetMsg('') }}
+                    style={{
+                      padding: '6px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      border: '1px solid #ddd', background: '#fff', color: '#444',
+                    }}
+                  >
+                    {resetId === c.id ? 'Cancel' : 'Set Password'}
+                  </button>
+                </div>
+                {resetId === c.id && (
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="New password"
+                      value={resetPassword}
+                      onChange={e => setResetPassword(e.target.value)}
+                      style={{
+                        padding: '6px 10px', fontSize: 13, borderRadius: 6,
+                        border: '1px solid #ddd', outline: 'none', width: 160,
+                      }}
+                    />
+                    <button
+                      onClick={() => saveResetPassword(c.id)}
+                      disabled={resetSaving || resetPassword.length < 8}
+                      style={{
+                        padding: '6px 12px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+                        border: 'none', background: '#1E2B3C', color: '#fff', cursor: 'pointer',
+                        opacity: resetSaving || resetPassword.length < 8 ? 0.5 : 1,
+                      }}
+                    >
+                      {resetSaving ? '…' : 'Save'}
+                    </button>
+                    {resetMsg && <span style={{ fontSize: 12, color: resetMsg === 'Password updated.' ? '#16a34a' : '#dc2626' }}>{resetMsg}</span>}
+                  </div>
+                )}
               </td>
             </tr>
           ))}
