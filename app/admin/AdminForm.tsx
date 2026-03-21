@@ -35,7 +35,7 @@ interface Config {
   primaryColor: string
   accentColor: string
   navyColor: string
-  cartMode: 'enabled' | 'inquire' | 'hidden'
+  cartMode: 'enabled' | 'inquire' | 'hidden' | 'quote'
   cartInquireUrl: string
   webhookUrl: string
   rules: Array<{ name: string; triggers: string[]; requiredTags: string[]; message: string }>
@@ -60,7 +60,7 @@ export default function AdminForm({ config, maskedApiKey }: { config: Config; ma
   const [primaryColor, setPrimaryColor] = useState(config.primaryColor)
   const [accentColor, setAccentColor] = useState(config.accentColor)
   const [navyColor, setNavyColor] = useState(config.navyColor)
-  const [cartMode, setCartMode] = useState<'enabled' | 'inquire' | 'hidden'>(config.cartMode)
+  const [cartMode, setCartMode] = useState<'enabled' | 'inquire' | 'hidden' | 'quote'>(config.cartMode)
   const [cartInquireUrl, setCartInquireUrl] = useState(config.cartInquireUrl)
   const [webhookUrl, setWebhookUrl] = useState(config.webhookUrl)
   const [rules, setRules] = useState<Rule[]>(
@@ -363,6 +363,7 @@ export default function AdminForm({ config, maskedApiKey }: { config: Config; ma
                 { value: 'enabled', label: '+ Add to Cart', desc: 'Fires an event your booking software catches. Best if you have API/integration.' },
                 { value: 'inquire', label: 'Inquire Button', desc: 'Shows an "Inquire" button that links to your contact or booking page.' },
                 { value: 'hidden', label: 'Browse Only', desc: 'No button — customers browse recommendations and contact you separately.' },
+                { value: 'quote', label: 'Quote List', desc: 'Customers build a quote list inside the widget. The full list is sent with their lead form.' },
               ] as const).map(opt => (
                 <label
                   key={opt.value}

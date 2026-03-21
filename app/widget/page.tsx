@@ -20,7 +20,7 @@ interface CompanyConfig {
   accentColor: string
   navyColor: string
   logoText: string
-  cartMode: 'enabled' | 'inquire' | 'hidden'
+  cartMode: 'enabled' | 'inquire' | 'hidden' | 'quote'
   cartInquireUrl: string
   webhookUrl: string
 }
@@ -145,6 +145,10 @@ function WidgetContent() {
       const url = cartInquireUrl || '#'
       window.parent.postMessage({ type: 'CONCIERGE_INQUIRE', item: { id: item.id, name: item.name, price: item.price } }, '*')
       if (url !== '#') window.open(url, '_blank')
+      return
+    }
+    if (cartMode === 'quote') {
+      setCart(prev => new Set([...prev, item.id]))
       return
     }
     setCart(prev => new Set([...prev, item.id]))
@@ -327,6 +331,7 @@ function WidgetContent() {
               primary={primary}
               navy={navy}
               companyId={companyId}
+              cartMode={cartMode}
               eventDescription={getEventDescription()}
               interestedItems={getInterestedItems()}
               onSubmitted={() => setLeadSubmitted(true)}
@@ -349,27 +354,36 @@ function WidgetContent() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Cart summary — only shown when cartMode is enabled */}
-      {cartMode === 'enabled' && cart.size > 0 && (
+      {/* Cart / Quote bar */}
+      {(cartMode === 'enabled' || cartMode === 'quote') && cart.size > 0 && (
         <div
           className="mx-4 mb-2 px-4 py-2.5 rounded-xl text-white text-sm font-medium flex items-center justify-between"
           style={{ background: navy }}
         >
           <div className="flex items-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-              <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.9-1.38l1.56-5.62H6"/>
-            </svg>
-            <span>{cart.size} item{cart.size !== 1 ? 's' : ''}</span>
+            {cartMode === 'quote' ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.9-1.38l1.56-5.62H6"/>
+              </svg>
+            )}
+            <span>{cartMode === 'quote' ? 'My Quote List' : `${cart.size} item${cart.size !== 1 ? 's' : ''}`}</span>
+            {cartMode === 'quote' && <span className="opacity-60 text-xs">({cart.size} item{cart.size !== 1 ? 's' : ''})</span>}
             <span className="opacity-50">·</span>
             <span className="font-bold">${cartTotal.toLocaleString()}</span>
           </div>
-          <button
-            onClick={() => window.parent.postMessage({ type: 'CONCIERGE_VIEW_CART' }, '*')}
-            className="text-xs underline opacity-80 hover:opacity-100"
-          >
-            View cart →
-          </button>
+          {cartMode === 'enabled' && (
+            <button
+              onClick={() => window.parent.postMessage({ type: 'CONCIERGE_VIEW_CART' }, '*')}
+              className="text-xs underline opacity-80 hover:opacity-100"
+            >
+              View cart →
+            </button>
+          )}
         </div>
       )}
 
@@ -453,7 +467,7 @@ function ProductCard({
   primary: string
   inCart: boolean
   onAdd: (item: InventoryItem) => void
-  cartMode?: 'enabled' | 'inquire' | 'hidden'
+  cartMode?: 'enabled' | 'inquire' | 'hidden' | 'quote'
   featured?: boolean
 }) {
   const [imgError, setImgError] = useState(false)
@@ -528,6 +542,26 @@ function ProductCard({
           Inquire
         </button>
       )}
+      {cartMode === 'quote' && (
+        <button
+          onClick={() => onAdd(item)}
+          disabled={inCart}
+          className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-white text-xs font-semibold transition-opacity disabled:opacity-60"
+          style={{ background: inCart ? '#9CA3AF' : primary }}
+        >
+          {inCart ? (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
+              Added
+            </>
+          ) : (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14"/></svg>
+              Add to Quote
+            </>
+          )}
+        </button>
+      )}
     </div>
   )
 }
@@ -536,6 +570,7 @@ function LeadCaptureForm({
   primary,
   navy,
   companyId,
+  cartMode,
   eventDescription,
   interestedItems,
   onSubmitted,
@@ -544,6 +579,7 @@ function LeadCaptureForm({
   primary: string
   navy: string
   companyId: string
+  cartMode: string
   eventDescription: string
   interestedItems: Array<{ name: string; price: number }>
   onSubmitted: () => void
@@ -579,9 +615,34 @@ function LeadCaptureForm({
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="px-4 pt-4 pb-3" style={{ background: `${navy}10` }}>
-        <div className="font-semibold text-gray-900 text-sm">Check Availability / Get a Quote</div>
+        <div className="font-semibold text-gray-900 text-sm">
+          {cartMode === 'quote' ? 'Send Your Quote Request' : 'Check Availability / Get a Quote'}
+        </div>
         <div className="text-xs text-gray-500 mt-0.5">Leave your details and we&apos;ll confirm availability for your event.</div>
       </div>
+
+      {cartMode === 'quote' && interestedItems.length > 0 && (
+        <div className="mx-4 mt-3 rounded-xl border border-gray-100 bg-gray-50 overflow-hidden">
+          <div className="px-3 py-2 border-b border-gray-100">
+            <span className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Your Quote List</span>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {interestedItems.map((item, i) => (
+              <div key={i} className="flex items-center justify-between px-3 py-2">
+                <span className="text-xs text-gray-700">{item.name}</span>
+                <span className="text-xs font-semibold text-gray-800">${item.price}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between px-3 py-2 bg-white border-t border-gray-200">
+            <span className="text-xs font-semibold text-gray-600">Estimated Total</span>
+            <span className="text-sm font-bold" style={{ color: primary }}>
+              ${interestedItems.reduce((s, i) => s + i.price, 0).toLocaleString()}
+            </span>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="px-4 py-3 space-y-3">
         <div>
           <input

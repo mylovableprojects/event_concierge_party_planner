@@ -14,7 +14,7 @@ export interface InventoryItem {
   image: string
 }
 
-export type CartMode = 'enabled' | 'inquire' | 'hidden'
+export type CartMode = 'enabled' | 'inquire' | 'hidden' | 'quote'
 
 export interface Rule {
   name: string
