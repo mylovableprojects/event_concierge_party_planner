@@ -13,6 +13,7 @@ export interface InventoryItem {
   ageMax: number
   guestCapacity: number
   image: string
+  url?: string
 }
 
 export type CartMode = 'enabled' | 'inquire' | 'hidden' | 'quote'
@@ -299,7 +300,8 @@ export function parseInventoryCSV(csv: string): InventoryItem[] {
   const ageMinIdx   = col(['age_min', 'minage', 'min age', 'age min', 'minimum age'])
   const ageMaxIdx   = col(['age_max', 'maxage', 'max age', 'age max', 'maximum age'])
   const capacityIdx = col(['capacity', 'guests', 'max guests', 'guest count', 'max_guests'])
-  const imageIdx    = col(['image', 'photo', 'img', 'picture', 'url'])
+  const imageIdx    = col(['image', 'photo', 'img', 'picture', 'image_url'])
+  const urlIdx      = col(['page_url', 'product_url', 'item_url', 'link', 'webpage', 'website'])
 
   const items: InventoryItem[] = []
 
@@ -320,6 +322,7 @@ export function parseInventoryCSV(csv: string): InventoryItem[] {
       ageMax: ageMaxIdx >= 0 ? parseInt(cells[ageMaxIdx]) || 99 : 99,
       guestCapacity: capacityIdx >= 0 ? parseInt(cells[capacityIdx]) || 50 : 50,
       image: imageIdx >= 0 ? cells[imageIdx] : '',
+      url: urlIdx >= 0 ? cells[urlIdx] || undefined : undefined,
     })
   }
 

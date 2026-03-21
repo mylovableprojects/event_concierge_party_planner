@@ -1187,6 +1187,7 @@ interface EditableItem {
   ageMax: number
   guestCapacity: number
   image: string
+  url?: string
 }
 
 function InventoryEditor() {
@@ -1238,7 +1239,7 @@ function InventoryEditor() {
     setItems(prev => [...prev, {
       id: newId, name: '', description: '', price: 0,
       category: 'Other', tags: '', ageMin: 1, ageMax: 99,
-      guestCapacity: 50, image: '',
+      guestCapacity: 50, image: '', url: '',
     }])
     setExpandedId(newId)
     setDirty(true)
@@ -1255,6 +1256,7 @@ function InventoryEditor() {
         ageMax: Number(item.ageMax) || 99,
         guestCapacity: Number(item.guestCapacity) || 50,
         tags: item.tags.split(';').map((t: string) => t.trim()).filter(Boolean),
+        url: item.url || undefined,
       }))
       const res = await fetch('/api/inventory', {
         method: 'PUT',
@@ -1410,6 +1412,15 @@ function InventoryEditor() {
                           value={item.image}
                           onChange={e => update(item.id, 'image', e.target.value)}
                           placeholder="https://..."
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Product Page URL <span className="text-gray-400 font-normal">(optional — links &quot;View details&quot; in widget)</span></label>
+                        <input
+                          value={item.url || ''}
+                          onChange={e => update(item.id, 'url', e.target.value)}
+                          placeholder="https://yoursite.com/products/bouncy-castle"
                           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>

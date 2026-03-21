@@ -10,6 +10,7 @@ interface InventoryItem {
   price: number
   category: string
   image: string
+  url?: string
 }
 
 interface CompanyConfig {
@@ -509,7 +510,20 @@ function ProductCard({
         <div className="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">
           {item.reason || item.description}
         </div>
-        <div className="font-bold text-sm mt-1" style={{ color: primary }}>${item.price}</div>
+        <div className="flex items-center gap-2 mt-1">
+          <div className="font-bold text-sm" style={{ color: primary }}>${item.price}</div>
+          {item.url && (
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+            >
+              View details
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Action button — varies by cartMode */}
