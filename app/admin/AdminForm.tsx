@@ -406,7 +406,16 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
 
           {/* Cart Mode */}
           <div className="space-y-3">
-            <h2 className="font-semibold text-gray-800">Add to Cart</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-gray-800">Add to Cart</h2>
+              <InfoPopover>
+                <p className="font-semibold text-gray-800">Which mode is right for me?</p>
+                <p><strong>+ Add to Cart</strong> — Best if you use InflatableOffice, HireHop, or any booking software that supports JavaScript events. Requires a developer to connect it.</p>
+                <p><strong>Inquire Button</strong> — Simplest option. No coding needed. Just paste your contact or booking page URL and every item card gets an &quot;Inquire&quot; button that sends customers there.</p>
+                <p><strong>Browse Only</strong> — No buttons at all. Customers browse AI recommendations, then call or email you. Great if you want to keep things simple.</p>
+                <p><strong>Quote List</strong> — Customers build a list of items they&apos;re interested in. The full list is sent with their lead form — perfect if you do custom quotes.</p>
+              </InfoPopover>
+            </div>
             <p className="text-xs text-gray-500">Choose how the widget handles item selection.</p>
             <div className="space-y-2">
               {([
@@ -452,7 +461,17 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="font-semibold text-gray-800">Inventory Rules</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold text-gray-800">Inventory Rules</h2>
+                  <InfoPopover>
+                    <p className="font-semibold text-gray-800">What are rules?</p>
+                    <p>Rules automatically filter your inventory based on keywords in the customer&apos;s conversation.</p>
+                    <p><strong>Example:</strong> If a customer mentions &quot;school&quot; or &quot;church&quot;, show only items tagged <code className="bg-gray-100 px-1 rounded">tssa</code> (TSSA-certified equipment required for public events).</p>
+                    <p><strong>Trigger Keywords</strong> — words that activate the rule (e.g. school, church, corporate).</p>
+                    <p><strong>Required Tags</strong> — only inventory items with these tags will be shown when the rule triggers.</p>
+                    <p>Tag your inventory items in the CSV using the <code className="bg-gray-100 px-1 rounded">tags</code> column, separated by semicolons.</p>
+                  </InfoPopover>
+                </div>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Auto-filter inventory based on event type. e.g. only show TSSA-certified items for school/church events.
                 </p>
@@ -541,10 +560,22 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
 
           {/* GHL Webhook */}
           <div className="space-y-2">
-            <h2 className="font-semibold text-gray-800">Go HighLevel Webhook <span className="text-gray-400 font-normal text-sm">(optional)</span></h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-gray-800">Go HighLevel Webhook <span className="text-gray-400 font-normal text-sm">(optional)</span></h2>
+              <InfoPopover>
+                <p className="font-semibold text-gray-800">How to get your GHL webhook URL</p>
+                <ol className="list-decimal list-inside space-y-1.5 text-xs">
+                  <li>In GHL, go to <strong>Automation → Workflows</strong></li>
+                  <li>Click <strong>+ New Workflow → Start from Scratch</strong></li>
+                  <li>Add a trigger: <strong>Inbound Webhook</strong></li>
+                  <li>Copy the webhook URL shown</li>
+                  <li>Paste it in the field below and click Save</li>
+                </ol>
+                <p className="text-xs mt-1">The widget will send: name, phone, email, event date, event description, and interested items.</p>
+              </InfoPopover>
+            </div>
             <p className="text-xs text-gray-500">
               When a customer fills out the &quot;Check Availability&quot; form in the widget, we POST their name, phone, event description, and interested items to this URL.
-              In GHL: <strong>Workflows → Add Trigger → Inbound Webhook</strong> — copy the webhook URL and paste it here.
             </p>
             <input
               type="url"
@@ -558,7 +589,26 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
           {/* API Key */}
           <div className="space-y-3">
             <div>
-              <h2 className="font-semibold text-gray-800">AI API Key</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-gray-800">AI API Key</h2>
+                <InfoPopover>
+                  <p className="font-semibold text-gray-800">How to get your API key</p>
+                  <p><strong>Anthropic (Claude):</strong></p>
+                  <ol className="list-decimal list-inside space-y-1 text-xs">
+                    <li>Go to <strong>console.anthropic.com</strong></li>
+                    <li>Sign in or create a free account</li>
+                    <li>Click <strong>API Keys → Create Key</strong></li>
+                    <li>Copy the key (starts with <code className="bg-gray-100 px-1 rounded">sk-ant-</code>)</li>
+                  </ol>
+                  <p className="mt-1"><strong>OpenAI (ChatGPT):</strong></p>
+                  <ol className="list-decimal list-inside space-y-1 text-xs">
+                    <li>Go to <strong>platform.openai.com</strong></li>
+                    <li>Click your profile → <strong>API Keys → Create new</strong></li>
+                    <li>Copy the key (starts with <code className="bg-gray-100 px-1 rounded">sk-</code>)</li>
+                  </ol>
+                  <p className="text-xs mt-1 text-gray-500">Your key is encrypted with AES-256 and never stored in plaintext.</p>
+                </InfoPopover>
+              </div>
               <p className="text-xs text-gray-500 mt-0.5">
                 Your key is encrypted with AES-256 and never stored in plaintext.
               </p>
@@ -637,7 +687,20 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
           {/* Resend Email Key */}
           <div className="space-y-3">
             <div>
-              <h2 className="font-semibold text-gray-800">Lead Email Notifications</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-gray-800">Lead Email Notifications</h2>
+                <InfoPopover>
+                  <p className="font-semibold text-gray-800">How to get your Resend API key</p>
+                  <ol className="list-decimal list-inside space-y-1.5 text-xs">
+                    <li>Go to <strong>resend.com</strong> and create a free account</li>
+                    <li>From the dashboard, click <strong>API Keys → Create API Key</strong></li>
+                    <li>Give it a name (e.g. &quot;Event Concierge&quot;)</li>
+                    <li>Copy the key (starts with <code className="bg-gray-100 px-1 rounded">re_</code>)</li>
+                    <li>Paste it below and click Save</li>
+                  </ol>
+                  <p className="text-xs mt-1 text-gray-500">Free tier includes 3,000 emails/month. Lead notifications go to your signup email address.</p>
+                </InfoPopover>
+              </div>
               <p className="text-xs text-gray-500 mt-0.5">
                 Get emailed instantly when a customer submits the lead form. Uses your own Resend account — get a free key at resend.com.
               </p>
@@ -978,7 +1041,17 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">Add this to your website before <code className="bg-gray-100 px-1 rounded">&lt;/body&gt;</code>:</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-700">Add this to your website before <code className="bg-gray-100 px-1 rounded">&lt;/body&gt;</code>:</p>
+                <InfoPopover>
+                  <p className="font-semibold text-gray-800">Where to paste this code</p>
+                  <p><strong>WordPress:</strong> Appearance → Theme Editor → footer.php, paste before <code className="bg-gray-100 px-1 rounded">&lt;/body&gt;</code>. Or use a plugin like &quot;Insert Headers and Footers&quot;.</p>
+                  <p><strong>Wix:</strong> Settings → Custom Code → Add Code → Body (end of page).</p>
+                  <p><strong>Squarespace:</strong> Settings → Advanced → Code Injection → Footer.</p>
+                  <p><strong>Webflow:</strong> Project Settings → Custom Code → Footer Code.</p>
+                  <p><strong>GHL Funnel/Website:</strong> Edit page → Settings → Tracking Code → Body Tracking Code.</p>
+                </InfoPopover>
+              </div>
               <div className="bg-gray-950 rounded-xl px-4 py-3 flex items-start gap-3">
                 <code className="text-green-400 text-xs flex-1 break-all">{embedCode}</code>
                 <button
@@ -1019,6 +1092,36 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
         </div>
 
       </div>
+    </div>
+  )
+}
+
+function InfoPopover({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-5 h-5 rounded-full border border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 flex items-center justify-center text-xs font-bold transition-colors"
+        aria-label="Help"
+      >
+        ?
+      </button>
+      {open && (
+        <div className="absolute left-0 top-7 z-50 w-72 bg-white border border-gray-200 rounded-2xl shadow-lg p-4">
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="absolute top-3 right-3 text-gray-300 hover:text-gray-500"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+          <div className="text-sm text-gray-600 leading-relaxed space-y-2 pr-4">
+            {children}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
