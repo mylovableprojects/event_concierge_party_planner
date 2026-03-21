@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifySession, COOKIE_NAME } from '@/lib/auth'
-import { getCompanyConfig } from '@/lib/inventory'
+import { getCompanyConfig, getInventory } from '@/lib/inventory'
 import { decrypt, maskApiKey } from '@/lib/encryption'
 import AdminForm from './AdminForm'
 
@@ -27,5 +27,7 @@ export default async function AdminPage() {
     try { maskedResendKey = maskApiKey(decrypt(config.encryptedResendKey)) } catch { /* ignore */ }
   }
 
-  return <AdminForm config={config} maskedApiKey={maskedApiKey} maskedResendKey={maskedResendKey} />
+  const inventoryCount = getInventory(session.companyId).length
+
+  return <AdminForm config={config} maskedApiKey={maskedApiKey} maskedResendKey={maskedResendKey} inventoryCount={inventoryCount} />
 }

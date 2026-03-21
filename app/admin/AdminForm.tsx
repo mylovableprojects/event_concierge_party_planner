@@ -53,7 +53,7 @@ const DEFAULT_RULES: Rule[] = [
 
 type InventoryTab = 'csv' | 'text' | 'photo' | 'manual'
 
-export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { config: Config; maskedApiKey?: string; maskedResendKey?: string }) {
+export default function AdminForm({ config, maskedApiKey, maskedResendKey, inventoryCount }: { config: Config; maskedApiKey?: string; maskedResendKey?: string; inventoryCount?: number }) {
   const router = useRouter()
   const companyId = config.id
   const [companyName, setCompanyName] = useState(config.name)
@@ -352,8 +352,8 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
           </button>
         </div>
 
-        {/* Setup checklist banner — shown until API key is added */}
-        {!maskedApiKey && (
+        {/* Setup checklist banner — shown until all steps complete */}
+        {(!maskedApiKey || !(inventoryCount ?? 0)) && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-3">
             <div className="flex items-center gap-2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" className="shrink-0">
@@ -363,11 +363,10 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
             </div>
             <div className="space-y-2">
               {[
-                { done: true,  label: 'Account created' },
-                { done: false, label: 'Add your AI API key', anchor: 'api-key', note: 'Required — powers the chat recommendations' },
-                { done: false, label: 'Upload your inventory', anchor: 'inventory', note: 'So the AI knows what you offer' },
-                { done: false, label: 'Add Resend key for lead emails', anchor: 'resend', note: 'Optional but recommended' },
-                { done: false, label: 'Copy and paste your embed code', note: 'After saving settings below' },
+                { done: true,             label: 'Account created' },
+                { done: !!maskedApiKey,   label: 'Add your AI API key',          note: 'Required — powers the chat recommendations' },
+                { done: (inventoryCount ?? 0) > 0, label: 'Upload your inventory', note: 'So the AI knows what you offer' },
+                { done: !!maskedResendKey, label: 'Add Resend key for lead emails', note: 'Optional but recommended' },
               ].map((step, i) => (
                 <div key={i} className="flex items-start gap-2.5">
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${step.done ? 'bg-green-500 border-green-500' : 'border-amber-400'}`}>
