@@ -36,6 +36,11 @@ export interface CompanyConfig {
   cartInquireUrl: string   // used when cartMode = 'inquire'
   rules: Rule[]
   webhookUrl: string       // GHL (or any) inbound webhook URL for lead capture
+  // Auth fields (set at signup)
+  yourName?: string
+  phone?: string
+  email?: string
+  passwordHash?: string
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data', 'companies')
@@ -109,6 +114,15 @@ export function listCompanies(): string[] {
   } catch {
     return []
   }
+}
+
+export function findCompanyByEmail(email: string): CompanyConfig | null {
+  const lower = email.toLowerCase()
+  for (const id of listCompanies()) {
+    const config = getCompanyConfig(id)
+    if (config?.email?.toLowerCase() === lower) return config
+  }
+  return null
 }
 
 /**
