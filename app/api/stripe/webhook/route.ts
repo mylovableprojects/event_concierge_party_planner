@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import Stripe from 'stripe'
-import { getCompanyConfig, saveCompanyConfig } from '@/lib/inventory'
+import { getCompanyConfig, saveCompanyConfig, getAllCompanyConfigs } from '@/lib/inventory'
 
 export async function POST(request: NextRequest) {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -48,8 +48,6 @@ export async function POST(request: NextRequest) {
 
   if (event.type === 'customer.subscription.deleted' || event.type === 'customer.subscription.paused') {
     const sub = event.data.object as Stripe.Subscription
-    // Find company by stripeSubscriptionId
-    const { getAllCompanyConfigs } = await import('@/lib/inventory')
     const all = getAllCompanyConfigs()
     const config = all.find(c => c.stripeSubscriptionId === sub.id)
     if (config) {

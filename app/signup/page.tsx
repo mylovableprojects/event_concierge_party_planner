@@ -43,6 +43,7 @@ export default function SignupPage() {
         throw new Error(`Checkout returned non-JSON (${checkoutRes.status}): ${checkoutText.slice(0, 200)}`)
       }
       if (!checkoutRes.ok) throw new Error(checkoutData.error || 'Could not start checkout')
+      if (!checkoutData.url) throw new Error('No checkout URL returned')
 
       window.location.href = checkoutData.url
     } catch (err) {
