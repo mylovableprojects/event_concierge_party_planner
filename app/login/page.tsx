@@ -89,8 +89,7 @@ export default function LoginPage() {
             <a href="/signup" className="text-[#B03A3A] font-semibold hover:underline">Sign up free</a>
           </p>
           <p className="text-center text-sm text-gray-400">
-            Forgot your password?{' '}
-            <a href="mailto:hello@rentalconciergeai.com?subject=Password%20Reset%20Request" className="text-gray-500 hover:underline">Email us</a>
+            <a href="/forgot-password" className="text-gray-500 hover:underline">Forgot your password?</a>
           </p>
         </form>
       </div>
