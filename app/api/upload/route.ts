@@ -5,6 +5,7 @@ import {
   saveCompanyConfig,
   getCompanyConfig,
   CompanyConfig,
+  InventoryItem,
 } from '@/lib/inventory'
 
 export async function POST(request: NextRequest) {
