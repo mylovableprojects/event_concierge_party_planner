@@ -1,0 +1,20 @@
+{
+  "id": "bounce-bros",
+  "name": "Bounce Bros",
+  "tagline": "Find the perfect rentals",
+  "primaryColor": "#B03A3A",
+  "accentColor": "#E8A020",
+  "navyColor": "#1E2B3C",
+  "logoText": "BO",
+  "allowedOrigins": [
+    "*"
+  ],
+  "cartMode": "hidden",
+  "cartInquireUrl": "",
+  "webhookUrl": "",
+  "rules": [],
+  "yourName": "Erin Kane",
+  "phone": "5195646601",
+  "email": "erinkane@gmail.com",
+  "passwordHash": "$2b$12$S6wZLLjbCeRS7s9GiCt15ewEDwRr0b9ZdtcmKi5JTdoSB7iBlhYXO"
+}

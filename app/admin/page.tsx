@@ -16,6 +16,7 @@ export default async function AdminPage() {
 
   const config = getCompanyConfig(session.companyId)
   if (!config) redirect('/login')
+  if (!config.subscriptionActive) redirect('/subscribe')
 
   let maskedApiKey: string | undefined
   if (config.encryptedApiKey) {

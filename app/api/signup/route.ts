@@ -68,8 +68,9 @@ export async function POST(request: Request) {
       }),
     }).catch(err => console.error('HighLevel webhook error:', err))
 
+    // Create session cookie so admin works after payment returns
     const token = signSession(companyId, email.trim().toLowerCase())
-    const res = NextResponse.json({ success: true, companyId })
+    const res = NextResponse.json({ success: true, companyId, needsPayment: true })
     res.cookies.set(sessionCookieOptions(token))
     return res
   } catch (err) {

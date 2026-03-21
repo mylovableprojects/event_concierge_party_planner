@@ -47,6 +47,10 @@ export interface CompanyConfig {
   encryptedApiKey?: string
   // Resend key (AES-256-GCM encrypted)
   encryptedResendKey?: string
+  // Stripe subscription
+  stripeCustomerId?: string
+  stripeSubscriptionId?: string
+  subscriptionActive?: boolean
 }
 
 export interface Lead {
@@ -85,6 +89,18 @@ export function saveInventory(companyId: string, items: InventoryItem[]): void {
   const dir = path.join(DATA_DIR, companyId)
   fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(path.join(dir, 'inventory.json'), JSON.stringify(items, null, 2))
+}
+
+export function getAllCompanyConfigs(): CompanyConfig[] {
+  try {
+    const dirs = fs.readdirSync(DATA_DIR, { withFileTypes: true })
+    return dirs
+      .filter(d => d.isDirectory())
+      .map(d => getCompanyConfig(d.name))
+      .filter((c): c is CompanyConfig => c !== null)
+  } catch {
+    return []
+  }
 }
 
 export function saveCompanyConfig(config: CompanyConfig): void {

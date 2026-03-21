@@ -20,6 +20,7 @@ export default function SignupPage() {
     setError('')
     setLoading(true)
     try {
+      // Step 1: Create account
       const res = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -27,10 +28,19 @@ export default function SignupPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Signup failed')
-      router.push(`/signup/success?company=${data.companyId}`)
+
+      // Step 2: Create Stripe checkout session and redirect
+      const checkoutRes = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: data.companyId }),
+      })
+      const checkoutData = await checkoutRes.json()
+      if (!checkoutRes.ok) throw new Error(checkoutData.error || 'Could not start checkout')
+
+      window.location.href = checkoutData.url
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
-    } finally {
       setLoading(false)
     }
   }
@@ -87,8 +97,9 @@ export default function SignupPage() {
 
           <button type="submit" disabled={loading}
             className="w-full py-3 rounded-xl bg-[#B03A3A] text-white font-semibold text-sm hover:bg-[#9a3232] disabled:opacity-50 transition-colors">
-            {loading ? 'Creating account...' : 'Create Account →'}
+            {loading ? 'Redirecting to checkout...' : 'Continue to Payment — $297/yr →'}
           </button>
+          <p className="text-center text-xs text-gray-400">Secure checkout via Stripe</p>
 
           <p className="text-center text-sm text-gray-500">
             Already have an account?{' '}
