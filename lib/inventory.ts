@@ -41,6 +41,9 @@ export interface CompanyConfig {
   phone?: string
   email?: string
   passwordHash?: string
+  // API key (AES-256-GCM encrypted — never stored or returned in plaintext)
+  apiProvider?: 'anthropic' | 'openai'
+  encryptedApiKey?: string
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data', 'companies')

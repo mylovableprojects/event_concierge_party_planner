@@ -39,6 +39,7 @@ interface Config {
   cartInquireUrl: string
   webhookUrl: string
   rules: Array<{ name: string; triggers: string[]; requiredTags: string[]; message: string }>
+  apiProvider?: 'anthropic' | 'openai'
 }
 
 const DEFAULT_RULES: Rule[] = [
@@ -52,7 +53,7 @@ const DEFAULT_RULES: Rule[] = [
 
 type InventoryTab = 'csv' | 'text' | 'photo' | 'manual'
 
-export default function AdminForm({ config }: { config: Config }) {
+export default function AdminForm({ config, maskedApiKey }: { config: Config; maskedApiKey?: string }) {
   const router = useRouter()
   const companyId = config.id
   const [companyName, setCompanyName] = useState(config.name)
@@ -81,6 +82,15 @@ export default function AdminForm({ config }: { config: Config }) {
   const [parseError, setParseError] = useState('')
   const [manualItems, setManualItems] = useState<ParsedItem[]>([])
   const [manualForm, setManualForm] = useState({ name: '', price: '', category: 'Inflatables', description: '', tags: '' })
+
+  // API key section
+  const [apiProvider, setApiProvider] = useState<'anthropic' | 'openai'>(config.apiProvider || 'anthropic')
+  const [newApiKey, setNewApiKey] = useState('')
+  const [apiKeyTesting, setApiKeyTesting] = useState(false)
+  const [apiKeyTestResult, setApiKeyTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [apiKeySaving, setApiKeySaving] = useState(false)
+  const [apiKeyError, setApiKeyError] = useState('')
+  const [apiKeySuccess, setApiKeySuccess] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<SetupResult | null>(null)
@@ -223,6 +233,48 @@ export default function AdminForm({ config }: { config: Config }) {
 
   const itemsForTab = inventoryTab === 'manual' ? manualItems : (parsedItems ?? [])
   const itemCount = inventoryTab === 'csv' ? null : itemsForTab.length
+
+  const testApiKey = async () => {
+    if (!newApiKey.trim()) return
+    setApiKeyTesting(true)
+    setApiKeyTestResult(null)
+    try {
+      const res = await fetch('/api/test-api-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: apiProvider, apiKey: newApiKey }),
+      })
+      const data = await res.json()
+      setApiKeyTestResult(data.valid ? { ok: true, msg: 'Key is valid!' } : { ok: false, msg: data.error })
+    } catch {
+      setApiKeyTestResult({ ok: false, msg: 'Could not reach validation endpoint' })
+    } finally {
+      setApiKeyTesting(false)
+    }
+  }
+
+  const saveApiKey = async () => {
+    if (!newApiKey.trim()) return
+    setApiKeySaving(true)
+    setApiKeyError('')
+    setApiKeySuccess(false)
+    try {
+      const res = await fetch('/api/update-api-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: apiProvider, apiKey: newApiKey }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save')
+      setApiKeySuccess(true)
+      setNewApiKey('')
+      setApiKeyTestResult(null)
+    } catch (err) {
+      setApiKeyError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setApiKeySaving(false)
+    }
+  }
 
   const handleLogout = async () => {
     await fetch('/api/logout', { method: 'POST' })
@@ -450,6 +502,85 @@ export default function AdminForm({ config }: { config: Config }) {
               placeholder="https://services.leadconnectorhq.com/hooks/..."
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          {/* API Key */}
+          <div className="space-y-3">
+            <div>
+              <h2 className="font-semibold text-gray-800">AI API Key</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Your key is encrypted with AES-256 and never stored in plaintext.
+              </p>
+            </div>
+
+            {maskedApiKey && (
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 shrink-0">
+                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                </svg>
+                <span className="text-xs font-mono text-gray-600">Current key: {maskedApiKey}</span>
+                <span className="ml-auto text-xs text-gray-400">{config.apiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">AI Provider</label>
+              <select
+                value={apiProvider}
+                onChange={e => { setApiProvider(e.target.value as 'anthropic' | 'openai'); setApiKeyTestResult(null) }}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="openai">OpenAI (ChatGPT)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {apiProvider === 'anthropic' ? 'Anthropic' : 'OpenAI'} API Key
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={newApiKey}
+                  onChange={e => { setNewApiKey(e.target.value); setApiKeyTestResult(null); setApiKeySuccess(false) }}
+                  placeholder={apiProvider === 'anthropic' ? 'sk-ant-...' : 'sk-...'}
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={testApiKey}
+                  disabled={!newApiKey.trim() || apiKeyTesting}
+                  className="shrink-0 px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors whitespace-nowrap"
+                >
+                  {apiKeyTesting ? 'Testing...' : 'Test Key'}
+                </button>
+              </div>
+              {apiKeyTestResult && (
+                <p className={`mt-1.5 text-xs font-medium ${apiKeyTestResult.ok ? 'text-green-600' : 'text-red-600'}`}>
+                  {apiKeyTestResult.ok ? '✓ ' : '✗ '}{apiKeyTestResult.msg}
+                </p>
+              )}
+            </div>
+
+            {apiKeyError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">{apiKeyError}</div>
+            )}
+            {apiKeySuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                API key updated successfully.
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={saveApiKey}
+              disabled={!newApiKey.trim() || apiKeySaving}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-40 transition-colors"
+            >
+              {apiKeySaving ? 'Saving...' : 'Save New Key'}
+            </button>
           </div>
 
           {/* Inventory — tabbed */}
