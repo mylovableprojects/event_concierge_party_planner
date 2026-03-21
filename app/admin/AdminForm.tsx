@@ -1164,8 +1164,8 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
           </a>
           <span className="mx-2">·</span>
           Event Concierge is a product of{' '}
-          <a href="https://thepartyrentalcompany.com" target="_blank" rel="noopener noreferrer" className="text-[#1E2B3C] hover:underline font-medium">
-            The Party Rental Company
+          <a href="https://thepartyrentaltoolkit.com" target="_blank" rel="noopener noreferrer" className="text-[#1E2B3C] hover:underline font-medium">
+            The Party Rental Toolkit
           </a>
         </div>
 
