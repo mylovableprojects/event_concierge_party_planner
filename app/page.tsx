@@ -72,12 +72,20 @@ export default function Home() {
               </div>
               <span className="font-semibold text-[#1E2B3C] text-sm tracking-tight">Event Concierge</span>
             </div>
-            <a
-              href="/signup"
-              className="px-4 py-2 rounded-lg bg-[#1E2B3C] text-white text-sm font-semibold hover:bg-[#2a3d55] transition-colors"
-            >
-              Get started →
-            </a>
+            <div className="flex items-center gap-3">
+              <a
+                href="/login"
+                className="px-4 py-2 rounded-lg text-[#1E2B3C] text-sm font-semibold hover:underline transition-colors"
+              >
+                Log in
+              </a>
+              <a
+                href="/signup"
+                className="px-4 py-2 rounded-lg bg-[#1E2B3C] text-white text-sm font-semibold hover:bg-[#2a3d55] transition-colors"
+              >
+                Get started →
+              </a>
+            </div>
           </div>
         </nav>
 
