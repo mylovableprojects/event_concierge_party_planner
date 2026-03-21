@@ -355,6 +355,20 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
           </button>
         </div>
 
+        {/* Done-for-you upsell banner */}
+        <div className="bg-[#1E2B3C] rounded-2xl p-5 flex items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-white text-sm">Want us to set everything up for you?</p>
+            <p className="text-blue-200 text-xs mt-0.5">We'll configure your widget, load your inventory, and get you live.</p>
+          </div>
+          <a
+            href="mailto:hello@rentalconciergeai.com"
+            className="shrink-0 bg-[#E8A020] hover:bg-[#d4911c] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors whitespace-nowrap"
+          >
+            Email Us
+          </a>
+        </div>
+
         {/* Setup checklist banner — shown until all steps complete */}
         {(!maskedApiKey || !(inventoryCount ?? 0)) && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-3">
