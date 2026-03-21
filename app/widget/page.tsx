@@ -52,6 +52,7 @@ type Message = UserMessage | AssistantMessage
 
 const QUICK_PROMPTS = [
   'Birthday for my 6 year old, 15 kids',
+  "Birthday party for my 8-year-old daughter — trying to keep it under $500. What would you suggest?",
   'Church picnic with 100+ guests',
   'Toddler-friendly backyard party',
 ]
