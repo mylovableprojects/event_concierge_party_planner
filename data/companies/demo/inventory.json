@@ -1,0 +1,326 @@
+[
+  {
+    "id": "colourful-castle-13x13",
+    "name": "13x13 Colourful Castle",
+    "description": "A classic, high-energy bounce house with bright primary colours. Fits up to 6 kids at once and is perfect for ages 3\u201312. Safe enclosed netting on all sides.",
+    "price": 209,
+    "category": "Bounce House",
+    "tags": [
+      "bouncer",
+      "kids",
+      "birthday",
+      "classic",
+      "indoor",
+      "outdoor",
+      "tssa"
+    ],
+    "ageMin": 3,
+    "ageMax": 12,
+    "guestCapacity": 50,
+    "image": "https://images.unsplash.com/photo-1575783970733-1aaedde1db74?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "jurassic-jump",
+    "name": "Jurassic Jump",
+    "description": "At age 6, kids love themed adventures! This TSSA-certified dinosaur bounce house brings prehistoric fun to any party. Features T-Rex graphics and jungle obstacles.",
+    "price": 209,
+    "category": "Bounce House",
+    "tags": [
+      "bouncer",
+      "kids",
+      "dinosaur",
+      "themed",
+      "birthday",
+      "outdoor",
+      "tssa"
+    ],
+    "ageMin": 4,
+    "ageMax": 12,
+    "guestCapacity": 50,
+    "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "spiderman-combo",
+    "name": "Spiderman Combo",
+    "description": "If you want to upgrade the fun, this combo unit includes a bounce area, climbing wall, and slide \u2014 all wrapped in Spiderman graphics. Superhero party essential.",
+    "price": 305,
+    "category": "Combo Unit",
+    "tags": [
+      "combo",
+      "slide",
+      "bouncer",
+      "superhero",
+      "spiderman",
+      "kids",
+      "birthday",
+      "tssa"
+    ],
+    "ageMin": 4,
+    "ageMax": 14,
+    "guestCapacity": 60,
+    "image": "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "princess-castle-combo",
+    "name": "Princess Castle Combo",
+    "description": "Every little princess deserves a magical party! This pink-and-purple castle combo features a bounce area, slide, and sparkling turrets. Girls aged 3\u201310 absolutely love it.",
+    "price": 305,
+    "category": "Combo Unit",
+    "tags": [
+      "combo",
+      "slide",
+      "bouncer",
+      "princess",
+      "girls",
+      "pink",
+      "birthday",
+      "themed",
+      "tssa"
+    ],
+    "ageMin": 3,
+    "ageMax": 10,
+    "guestCapacity": 60,
+    "image": "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "mega-water-slide",
+    "name": "Mega Water Slide",
+    "description": "Beat the heat with our 18-foot dual-lane water slide. Kids race side by side to the splash pool at the bottom. Perfect for summer birthday parties and backyard fun.",
+    "price": 349,
+    "category": "Water Slide",
+    "tags": [
+      "water",
+      "slide",
+      "summer",
+      "outdoor",
+      "teens",
+      "kids",
+      "birthday"
+    ],
+    "ageMin": 5,
+    "ageMax": 17,
+    "guestCapacity": 80,
+    "image": "https://images.unsplash.com/photo-1548247416-ec66f4900b2e?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "obstacle-course",
+    "name": "Obstacle Course",
+    "description": "Tunnels, climbing walls, pop-ups, and a slide \u2014 this 40-foot obstacle course is a hit at corporate events, school picnics, and large birthday parties. Handles big crowds.",
+    "price": 425,
+    "category": "Obstacle Course",
+    "tags": [
+      "obstacle",
+      "corporate",
+      "school",
+      "large group",
+      "teens",
+      "adults",
+      "picnic",
+      "tssa"
+    ],
+    "ageMin": 5,
+    "ageMax": 99,
+    "guestCapacity": 200,
+    "image": "https://images.unsplash.com/photo-1565017228695-4c45dea1ca71?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "toddler-bouncer",
+    "name": "Toddler Soft Play Zone",
+    "description": "Designed for the littlest guests (ages 1\u20134), this soft play zone features gentle foam-padded shapes, a mini slide, and a ball pit. Safe, supervised fun for toddlers.",
+    "price": 179,
+    "category": "Bounce House",
+    "tags": [
+      "toddler",
+      "soft play",
+      "baby",
+      "young",
+      "birthday",
+      "indoor",
+      "safe"
+    ],
+    "ageMin": 1,
+    "ageMax": 4,
+    "guestCapacity": 20,
+    "image": "https://images.unsplash.com/photo-1560265759-23dfd4c8dbcc?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "dunk-tank",
+    "name": "Dunk Tank",
+    "description": "A party crowd-pleaser! Put the teacher, coach, or parent on the hot seat and let kids throw to dunk them. Great for school events, fundraisers, and large birthday parties.",
+    "price": 225,
+    "category": "Activity",
+    "tags": [
+      "dunk tank",
+      "school",
+      "corporate",
+      "large group",
+      "teens",
+      "adults",
+      "fundraiser"
+    ],
+    "ageMin": 5,
+    "ageMax": 99,
+    "guestCapacity": 150,
+    "image": "https://images.unsplash.com/photo-1588392382834-a891154bca4d?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "popcorn-machine",
+    "name": "Popcorn Machine",
+    "description": "Nothing says 'party' like the smell of fresh movie-theatre popcorn! Includes the machine, supplies for 50 servings, and bags. Easy to operate \u2014 plug in and pop!",
+    "price": 100,
+    "category": "Concession",
+    "tags": [
+      "popcorn",
+      "concession",
+      "food",
+      "upsell",
+      "all ages",
+      "indoor",
+      "outdoor"
+    ],
+    "ageMin": 1,
+    "ageMax": 99,
+    "guestCapacity": 200,
+    "image": "https://images.unsplash.com/photo-1585647347384-2593bc35786b?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "cotton-candy-machine",
+    "name": "Cotton Candy Machine",
+    "description": "Spin up fluffy clouds of cotton candy in pink and blue! Includes machine, supplies for 50 servings, and cones. Kids go absolutely wild for this one.",
+    "price": 110,
+    "category": "Concession",
+    "tags": [
+      "cotton candy",
+      "concession",
+      "food",
+      "upsell",
+      "kids",
+      "birthday"
+    ],
+    "ageMin": 3,
+    "ageMax": 99,
+    "guestCapacity": 200,
+    "image": "https://images.unsplash.com/photo-1562967914-608f82629710?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "snow-cone-machine",
+    "name": "Snow Cone Machine",
+    "description": "Cool down guests with icy-cold snow cones in a rainbow of flavours. Includes machine, ice, syrup (6 flavours), and 50 cups. A summer party essential.",
+    "price": 95,
+    "category": "Concession",
+    "tags": [
+      "snow cone",
+      "concession",
+      "food",
+      "upsell",
+      "summer",
+      "kids",
+      "outdoor"
+    ],
+    "ageMin": 3,
+    "ageMax": 99,
+    "guestCapacity": 200,
+    "image": "https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "tables-chairs-package",
+    "name": "Tables & Chairs Package (10 tables, 80 chairs)",
+    "description": "Everything you need to seat your guests. Includes 10 folding banquet tables (8-foot) and 80 white folding chairs. Delivery and pickup included.",
+    "price": 280,
+    "category": "Furniture",
+    "tags": [
+      "tables",
+      "chairs",
+      "furniture",
+      "upsell",
+      "large group",
+      "corporate",
+      "picnic",
+      "all ages"
+    ],
+    "ageMin": 1,
+    "ageMax": 99,
+    "guestCapacity": 80,
+    "image": "https://images.unsplash.com/photo-1511795409834-432f7b1728b2?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "party-tent-20x20",
+    "name": "20x20 Party Tent",
+    "description": "Keep your guests covered rain or shine. Our 20x20 white canopy tent provides shade for up to 60 guests. Perfect addition to any outdoor event.",
+    "price": 195,
+    "category": "Tent",
+    "tags": [
+      "tent",
+      "canopy",
+      "outdoor",
+      "shade",
+      "large group",
+      "upsell",
+      "corporate",
+      "picnic"
+    ],
+    "ageMin": 1,
+    "ageMax": 99,
+    "guestCapacity": 60,
+    "image": "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "balloons-lawn-sign",
+    "name": "Balloons Lawn Sign",
+    "description": "A great way to let the neighbourhood know where the party is! Customized lawn sign with name and age, surrounded by a balloons bouquet. Setup included.",
+    "price": 125,
+    "category": "Decor",
+    "tags": [
+      "lawn sign",
+      "decor",
+      "birthday",
+      "upsell",
+      "personalised",
+      "outdoor"
+    ],
+    "ageMin": 1,
+    "ageMax": 18,
+    "guestCapacity": 200,
+    "image": "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "photo-booth",
+    "name": "Photo Booth",
+    "description": "Capture memories! Our photo booth includes a backdrop, props box, and instant photo printer. Prints 4x6 photo strips that guests keep as favours.",
+    "price": 350,
+    "category": "Activity",
+    "tags": [
+      "photo booth",
+      "teens",
+      "adults",
+      "sweet 16",
+      "corporate",
+      "graduation",
+      "upsell"
+    ],
+    "ageMin": 8,
+    "ageMax": 99,
+    "guestCapacity": 200,
+    "image": "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=200&h=150&fit=crop"
+  },
+  {
+    "id": "carnival-games",
+    "name": "Carnival Games Package (5 games)",
+    "description": "Five classic midway games: ring toss, duck pond, fishing game, bean bag toss, and ball roll. Includes prizes. Great for all ages at school events and large parties.",
+    "price": 275,
+    "category": "Activity",
+    "tags": [
+      "carnival",
+      "games",
+      "school",
+      "large group",
+      "all ages",
+      "picnic",
+      "corporate"
+    ],
+    "ageMin": 3,
+    "ageMax": 99,
+    "guestCapacity": 200,
+    "image": "https://images.unsplash.com/photo-1471341971476-ae15ff5dd4ea?w=200&h=150&fit=crop"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "id": "demo",
+  "name": "Bounce Bros Party Rentals",
+  "tagline": "Find the perfect rentals",
+  "primaryColor": "#B03A3A",
+  "accentColor": "#E8A020",
+  "navyColor": "#1E2B3C",
+  "logoText": "BB",
+  "allowedOrigins": ["*"],
+  "cartMode": "enabled",
+  "cartInquireUrl": "",
+  "webhookUrl": "https://demo-webhook-placeholder",
+  "rules": [
+    {
+      "name": "TSSA Certified Only",
+      "triggers": ["church", "school", "corporate", "company picnic", "municipality", "government", "organization", "non-profit", "nonprofit", "festival", "public event"],
+      "requiredTags": ["tssa"],
+      "message": "For school, church, and corporate events we only show TSSA-certified equipment that meets safety requirements for public and organized events"
+    }
+  ]
+}

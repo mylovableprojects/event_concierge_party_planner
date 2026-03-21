@@ -1,65 +1,65 @@
-import Image from "next/image";
-
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-[#F5F0EA] flex flex-col items-center justify-center px-4 font-sans">
+      <div className="max-w-lg w-full text-center space-y-6">
+
+        {/* Logo / icon */}
+        <div className="flex justify-center">
+          <div className="w-20 h-20 rounded-3xl bg-[#1E2B3C] flex items-center justify-center shadow-xl">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900 tracking-tight">Event Concierge</h1>
+          <p className="text-gray-500 mt-2 text-lg">AI-powered party rental recommendations. Click the chat button to try it live.</p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href="/widget?company=demo"
             target="_blank"
             rel="noopener noreferrer"
+            className="px-6 py-3 rounded-xl bg-[#B03A3A] text-white font-semibold hover:bg-[#9a3232] transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+            Open Widget Fullscreen
           </a>
           <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/admin"
+            className="px-6 py-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-semibold hover:bg-gray-50 transition-colors"
           >
-            Documentation
+            Setup Your Company →
           </a>
         </div>
-      </main>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-left space-y-3">
+          <h2 className="font-semibold text-gray-800 text-sm">How it works</h2>
+          <ul className="space-y-2 text-sm text-gray-600">
+            {[
+              ['🎯', 'Customer describes their event in plain English'],
+              ['🤖', 'Claude AI reads your full inventory and picks the best matches'],
+              ['🛒', 'Recommendations + upsells shown as shoppable product cards'],
+              ['📋', 'Clicking Add fires an event your booking software can catch'],
+            ].map(([icon, text]) => (
+              <li key={text as string} className="flex items-start gap-2">
+                <span>{icon}</span>
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="text-xs text-gray-400">
+          Powered by Claude AI · Add to any website with one{' '}
+          <code className="bg-gray-100 px-1 rounded">&lt;script&gt;</code> tag
+        </p>
+      </div>
+
+      {/* The embed script loaded on this demo page */}
+      {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+      <script src="/embed.js" data-company="demo" />
     </div>
-  );
+  )
 }
