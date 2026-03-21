@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
     const { activeRules, filteredInventory } = applyRules(inventory, config.rules || [], conversationText)
 
     const result = provider === 'openai'
-      ? await getRecommendationsOpenAI(messages, filteredInventory, config.name, apiKey, activeRules)
-      : await getRecommendations(messages, filteredInventory, config.name, apiKey, activeRules)
+      ? await getRecommendationsOpenAI(messages, filteredInventory, config.name, apiKey, activeRules, config.customInstructions)
+      : await getRecommendations(messages, filteredInventory, config.name, apiKey, activeRules, config.customInstructions)
 
     return Response.json(result)
   } catch (err) {

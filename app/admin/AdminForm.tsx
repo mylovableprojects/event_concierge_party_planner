@@ -38,6 +38,7 @@ interface Config {
   cartMode: 'enabled' | 'inquire' | 'hidden' | 'quote'
   cartInquireUrl: string
   webhookUrl: string
+  customInstructions?: string
   rules: Array<{ name: string; triggers: string[]; requiredTags: string[]; message: string }>
   apiProvider?: 'anthropic' | 'openai'
 }
@@ -63,6 +64,7 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
   const [cartMode, setCartMode] = useState<'enabled' | 'inquire' | 'hidden' | 'quote'>(config.cartMode)
   const [cartInquireUrl, setCartInquireUrl] = useState(config.cartInquireUrl)
   const [webhookUrl, setWebhookUrl] = useState(config.webhookUrl)
+  const [customInstructions, setCustomInstructions] = useState(config.customInstructions || '')
   const [rules, setRules] = useState<Rule[]>(
     config.rules.map(r => ({
       name: r.name,
@@ -189,6 +191,7 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
     fd.append('cartMode', cartMode)
     fd.append('cartInquireUrl', cartInquireUrl)
     fd.append('webhookUrl', webhookUrl)
+    fd.append('customInstructions', customInstructions)
     fd.append('rules', JSON.stringify(serializedRules))
 
     if (inventoryTab === 'csv' && file) {
@@ -613,6 +616,32 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
               onChange={e => setWebhookUrl(e.target.value)}
               placeholder="https://services.leadconnectorhq.com/hooks/..."
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Custom AI Instructions */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold text-gray-800">Custom AI Instructions <span className="text-gray-400 font-normal text-sm">(optional)</span></h2>
+              <InfoPopover>
+                <p className="font-semibold text-gray-800">What to put here</p>
+                <p>Anything you want the AI to always know or say. Examples:</p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Contact info: <em>&quot;If anyone asks to speak to someone or needs help, tell them to call or text 519-560-7701.&quot;</em></li>
+                  <li>Service area: <em>&quot;We deliver within 50km of Kitchener, ON only.&quot;</em></li>
+                  <li>Hours: <em>&quot;Our office is open Mon–Sat 9am–5pm.&quot;</em></li>
+                  <li>Deposits: <em>&quot;All bookings require a 25% deposit to hold the date.&quot;</em></li>
+                  <li>Policies: <em>&quot;We do not rent water slides in October or November.&quot;</em></li>
+                </ul>
+                <p className="text-xs text-gray-500 mt-1">The AI will follow these instructions in every conversation.</p>
+              </InfoPopover>
+            </div>
+            <textarea
+              value={customInstructions}
+              onChange={e => setCustomInstructions(e.target.value)}
+              placeholder={"If anyone asks to speak to someone or needs help, tell them to call or text 519-560-7701.\nWe deliver within 50km of Kitchener, ON.\nAll bookings require a 25% deposit."}
+              rows={4}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-700 placeholder:text-gray-400"
             />
           </div>
 

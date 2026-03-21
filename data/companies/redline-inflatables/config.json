@@ -12,11 +12,26 @@
   "cartMode": "hidden",
   "cartInquireUrl": "",
   "webhookUrl": "",
-  "rules": [],
-  "yourName": "Judy Parker",
-  "phone": "2263468190",
-  "email": "judyparkeronline@gmail.com",
-  "passwordHash": "$2b$12$Sw/bllWCpF32NtT0shsG2eyseWl1PyiID0SnwzSNiOn.80Fu1Zj9a",
+  "rules": [
+    {
+      "name": "TSSA Certified Only",
+      "triggers": [
+        "church",
+        "school",
+        "corporate",
+        "company picnic",
+        "municipality",
+        "government",
+        "organization",
+        "festival",
+        "public event"
+      ],
+      "requiredTags": [
+        "tssa"
+      ],
+      "message": "For school, church, and corporate events we only show TSSA-certified equipment"
+    }
+  ],
   "apiProvider": "anthropic",
-  "encryptedApiKey": "4558be41aa04c3bf5fb422f1:47e76e78c27fe63644f315dfd63c1f2c:a289daa17510ad1bb4210af63c8803d2dbff2ad7f5b8b37673074f7446ee3e3f5d75bc730d7c37f31c1f13bed8e59ac5c11dc316f526a7139c08e6497e617aaf760af7572fb146d60b8b80131c5ad829a78ff5cc708a21e0c77009f3d3aa2205b1910f4f45c7ed0e28b39218"
+  "encryptedApiKey": "f1efdfba041eda5a965a354c:f6398e440a54ab3c1f012de1700e4129:16ef7cd41367ffbd4d3d7e61fcf5376308bea6cff113856192c6c534048c3df5ccce07a398a90b667c30fb30e2b548d73002cb9d8d1a6512889e38ece755f6aa6e9b463cca01e843f7f2890bfd577eaee02ee77f2cb9c0de0f2d8355d2f76e51232bbaae010db2c9c5b3a49f"
 }

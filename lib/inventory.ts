@@ -36,6 +36,7 @@ export interface CompanyConfig {
   cartInquireUrl: string   // used when cartMode = 'inquire'
   rules: Rule[]
   webhookUrl: string       // GHL (or any) inbound webhook URL for lead capture
+  customInstructions?: string  // Free-text instructions injected into the AI system prompt
   // Auth fields (set at signup)
   yourName?: string
   phone?: string

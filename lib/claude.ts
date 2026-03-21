@@ -13,7 +13,7 @@ export interface RecommendationResponse {
   followUpQuestion: string | null
 }
 
-export function buildSystemPrompt(inventory: InventoryItem[], companyName: string, activeRules: Rule[] = []): string {
+export function buildSystemPrompt(inventory: InventoryItem[], companyName: string, activeRules: Rule[] = [], customInstructions?: string): string {
   const catalog = inventory.map(item =>
     `- ID: ${item.id} | ${item.name} | $${item.price} | Category: ${item.category} | Ages: ${item.ageMin}–${item.ageMax} | Capacity: up to ${item.guestCapacity} guests | Tags: ${item.tags.join(', ')}\n  Description: ${item.description}`
   ).join('\n\n')
@@ -52,7 +52,8 @@ RULES:
 - If the event description is vague, ask a follow-up question to get more details (age, guest count, theme, indoor/outdoor)
 - If they have enough info, set followUpQuestion to null
 - Consider age groups, guest count, and themes when recommending
-- Concession machines and decor are always great upsells for birthday parties`
+- Concession machines and decor are always great upsells for birthday parties
+${customInstructions ? `\nBUSINESS-SPECIFIC INSTRUCTIONS (follow these exactly):\n${customInstructions}` : ''}`
 }
 
 export async function getRecommendations(
@@ -60,14 +61,15 @@ export async function getRecommendations(
   inventory: InventoryItem[],
   companyName: string,
   apiKey: string,
-  activeRules: Rule[] = []
+  activeRules: Rule[] = [],
+  customInstructions?: string
 ): Promise<RecommendationResponse> {
   const client = new Anthropic({ apiKey })
 
   const response = await client.messages.create({
     model: 'claude-opus-4-6',
     max_tokens: 1024,
-    system: buildSystemPrompt(inventory, companyName, activeRules),
+    system: buildSystemPrompt(inventory, companyName, activeRules, customInstructions),
     messages,
   })
 

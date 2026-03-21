@@ -7,7 +7,8 @@ export async function getRecommendationsOpenAI(
   inventory: InventoryItem[],
   companyName: string,
   apiKey: string,
-  activeRules: Rule[] = []
+  activeRules: Rule[] = [],
+  customInstructions?: string
 ): Promise<RecommendationResponse> {
   const client = new OpenAI({ apiKey })
 
@@ -15,7 +16,7 @@ export async function getRecommendationsOpenAI(
     model: 'gpt-4o-mini',
     max_tokens: 1024,
     messages: [
-      { role: 'system', content: buildSystemPrompt(inventory, companyName, activeRules) },
+      { role: 'system', content: buildSystemPrompt(inventory, companyName, activeRules, customInstructions) },
       ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
     ],
   })

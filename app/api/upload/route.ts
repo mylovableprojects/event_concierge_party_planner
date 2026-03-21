@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
     const cartMode = ((formData.get('cartMode') as string) || 'enabled') as 'enabled' | 'inquire' | 'hidden' | 'quote'
     const cartInquireUrl = (formData.get('cartInquireUrl') as string) || ''
     const webhookUrl = (formData.get('webhookUrl') as string) || ''
+    const customInstructions = (formData.get('customInstructions') as string) || ''
     const rulesRaw = formData.get('rules') as string | null
     const rules = rulesRaw ? JSON.parse(rulesRaw) : []
     const file = formData.get('file') as File | null
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
       cartInquireUrl,
       webhookUrl,
       rules,
+      customInstructions: customInstructions || undefined,
     }
     saveCompanyConfig(config)
 
