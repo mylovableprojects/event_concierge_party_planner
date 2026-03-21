@@ -48,7 +48,6 @@ export default async function SignupSuccessPage({
           <div className="bg-gray-950 rounded-xl px-4 py-3 flex items-start gap-3">
             <code className="text-green-400 text-xs flex-1 break-all leading-relaxed">{embedCode}</code>
             <button
-              onClick={() => {}}
               id="copy-btn"
               className="text-gray-400 hover:text-white shrink-0 transition-colors mt-0.5"
               title="Copy"
