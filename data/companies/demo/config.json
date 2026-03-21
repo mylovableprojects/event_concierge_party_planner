@@ -7,7 +7,7 @@
   "navyColor": "#1E2B3C",
   "logoText": "BB",
   "allowedOrigins": ["*"],
-  "cartMode": "enabled",
+  "cartMode": "hidden",
   "cartInquireUrl": "",
   "webhookUrl": "https://demo-webhook-placeholder",
   "rules": [
