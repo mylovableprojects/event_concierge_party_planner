@@ -35,5 +35,7 @@
   "apiProvider": "anthropic",
   "encryptedApiKey": "f1efdfba041eda5a965a354c:f6398e440a54ab3c1f012de1700e4129:16ef7cd41367ffbd4d3d7e61fcf5376308bea6cff113856192c6c534048c3df5ccce07a398a90b667c30fb30e2b548d73002cb9d8d1a6512889e38ece755f6aa6e9b463cca01e843f7f2890bfd577eaee02ee77f2cb9c0de0f2d8355d2f76e51232bbaae010db2c9c5b3a49f",
   "customInstructions": "Contact info: \"If anyone asks to speak to someone or needs help, tell them to call or text 519-560-7701.\"\r\nService area: \"We deliver to Windsor-Essex, Chatham-Kent, Sarnia-Lambton - delivery fees apply\"\r\nHours: \"Our office is open Mon–Sat 9am–5pm.\"\r\nDeposits: \"All bookings require a 50% deposit to hold the date.\"\r\nPolicies: \"We do not rent water slides in October or November.\"",
-  "subscriptionActive": true
+  "subscriptionActive": true,
+  "email": "judyparkeronline@gmail.com",
+  "passwordHash": "$2b$12$4f9lOUe22l1WTbVy1Xu56eH/q02ReJjpmqwjjOwb46cusJrlmuAua"
 }
