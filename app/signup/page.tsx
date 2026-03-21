@@ -35,7 +35,13 @@ export default function SignupPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ companyId: data.companyId }),
       })
-      const checkoutData = await checkoutRes.json()
+      const checkoutText = await checkoutRes.text()
+      let checkoutData: { url?: string; error?: string }
+      try {
+        checkoutData = JSON.parse(checkoutText)
+      } catch {
+        throw new Error(`Checkout returned non-JSON (${checkoutRes.status}): ${checkoutText.slice(0, 200)}`)
+      }
       if (!checkoutRes.ok) throw new Error(checkoutData.error || 'Could not start checkout')
 
       window.location.href = checkoutData.url
