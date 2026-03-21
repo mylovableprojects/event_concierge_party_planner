@@ -160,7 +160,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-5">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
 
               {/* Card 1 — Add to Cart */}
               <div className="card-hover relative bg-white rounded-2xl p-6 shadow-sm border border-[#1E2B3C]/8 flex flex-col">
@@ -223,7 +223,28 @@ export default function Home() {
                 </div>
                 <h3 className="font-semibold text-[#1E2B3C] text-lg mb-2 leading-tight">Let the AI do the selling</h3>
                 <p className="text-sm text-gray-500 leading-relaxed flex-1">
-                  No buttons — just beautiful, AI-curated recommendations. Customers browse, get excited, then call or email you. Perfect for quote-based businesses.
+                  No buttons — just beautiful, AI-curated recommendations. Customers browse, get excited, then call or email you.
+                </p>
+                <div className="mt-5 pt-4 border-t border-gray-100 flex items-center gap-1.5">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E8A020" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span className="text-xs text-gray-400 font-medium">Best for high-touch businesses</span>
+                </div>
+              </div>
+
+              {/* Card 4 — Quote List */}
+              <div className="card-hover bg-white rounded-2xl p-6 shadow-sm border border-[#1E2B3C]/8 flex flex-col">
+                <div className="w-11 h-11 rounded-xl bg-[#B03A3A]/8 flex items-center justify-center mb-4">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B03A3A" strokeWidth="2">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                  </svg>
+                </div>
+                <div className="inline-flex items-center gap-1.5 bg-[#B03A3A]/15 text-[#B03A3A] text-xs font-bold px-2.5 py-1 rounded-lg w-fit mb-3">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
+                  Quote List
+                </div>
+                <h3 className="font-semibold text-[#1E2B3C] text-lg mb-2 leading-tight">Build a quote inside the chat</h3>
+                <p className="text-sm text-gray-500 leading-relaxed flex-1">
+                  Customers add items to a quote list as they browse. Their full list — with prices and estimated total — is submitted with their lead form.
                 </p>
                 <div className="mt-5 pt-4 border-t border-gray-100 flex items-center gap-1.5">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E8A020" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
