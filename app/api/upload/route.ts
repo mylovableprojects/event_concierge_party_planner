@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const accentColor = (formData.get('accentColor') as string) || '#E8A020'
     const navyColor = (formData.get('navyColor') as string) || '#1E2B3C'
     const logoText = (formData.get('logoText') as string) || companyName?.slice(0, 2).toUpperCase() || 'PP'
-    const cartMode = ((formData.get('cartMode') as string) || 'enabled') as 'enabled' | 'inquire' | 'hidden'
+    const cartMode = ((formData.get('cartMode') as string) || 'enabled') as 'enabled' | 'inquire' | 'hidden' | 'quote'
     const cartInquireUrl = (formData.get('cartInquireUrl') as string) || ''
     const webhookUrl = (formData.get('webhookUrl') as string) || ''
     const rulesRaw = formData.get('rules') as string | null
@@ -28,9 +28,10 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'companyId and companyName are required' }, { status: 400 })
     }
 
-    // Save / update company config
+    // Preserve all existing fields (auth, API keys, etc.) — only overwrite what the form sends
     const existingConfig = getCompanyConfig(companyId)
     const config: CompanyConfig = {
+      ...existingConfig,
       id: companyId,
       name: companyName,
       tagline: existingConfig?.tagline ?? 'Find the perfect rentals',
