@@ -1156,6 +1156,19 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
           Visit <a href="/widget?company=demo" target="_blank" className="underline">/widget?company=demo</a> — try typing &quot;school picnic&quot; to see the rule filter in action.
         </div>
 
+        {/* Support footer */}
+        <div className="border-t border-gray-100 pt-6 text-center text-sm text-gray-400">
+          Need help?{' '}
+          <a href="mailto:hello@thepartyrentaltoolkit.com" className="text-[#B03A3A] hover:underline font-medium">
+            hello@thepartyrentaltoolkit.com
+          </a>
+          <span className="mx-2">·</span>
+          Event Concierge is a product of{' '}
+          <a href="https://thepartyrentalcompany.com" target="_blank" rel="noopener noreferrer" className="text-[#1E2B3C] hover:underline font-medium">
+            The Party Rental Company
+          </a>
+        </div>
+
       </div>
     </div>
   )

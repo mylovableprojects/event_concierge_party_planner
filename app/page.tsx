@@ -399,6 +399,29 @@ export default function Home() {
 
       </div>
 
+        {/* ── FOOTER ─────────────────────────────────────────────── */}
+        <footer className="border-t border-[#1E2B3C]/10 py-8 px-6">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-400">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-[#1E2B3C] flex items-center justify-center">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </div>
+              <span>Event Concierge — a product of{' '}
+                <a href="https://thepartyrentalcompany.com" target="_blank" rel="noopener noreferrer" className="text-[#1E2B3C] font-medium hover:underline">
+                  The Party Rental Company
+                </a>
+              </span>
+            </div>
+            <a href="mailto:hello@thepartyrentaltoolkit.com" className="text-[#B03A3A] hover:underline font-medium">
+              hello@thepartyrentaltoolkit.com
+            </a>
+          </div>
+        </footer>
+
+      </div>
+
       {/* eslint-disable-next-line @next/next/no-sync-scripts */}
       <script src="/embed.js" data-company="demo" />
     </>
