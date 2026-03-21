@@ -14,7 +14,7 @@ export default async function AdminPage() {
   const session = verifySession(token)
   if (!session) redirect('/login')
 
-  const config = getCompanyConfig(session.companyId)
+  const config = await getCompanyConfig(session.companyId)
   if (!config) redirect('/login')
   if (!config.subscriptionActive) redirect('/subscribe')
 
@@ -28,7 +28,7 @@ export default async function AdminPage() {
     try { maskedResendKey = maskApiKey(decrypt(config.encryptedResendKey)) } catch { /* ignore */ }
   }
 
-  const inventoryCount = getInventory(session.companyId).length
+  const inventoryCount = (await getInventory(session.companyId)).length
 
   return <AdminForm config={config} maskedApiKey={maskedApiKey} maskedResendKey={maskedResendKey} inventoryCount={inventoryCount} />
 }

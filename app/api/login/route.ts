@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Email and password are required.' }, { status: 400 })
     }
 
-    const config = findCompanyByEmail(email.trim())
+    const config = await findCompanyByEmail(email.trim())
     if (!config || !config.passwordHash) {
       return Response.json({ error: 'Invalid email or password.' }, { status: 401 })
     }

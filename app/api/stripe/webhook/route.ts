@@ -30,13 +30,13 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'No companyId' }, { status: 400 })
     }
 
-    const config = getCompanyConfig(companyId)
+    const config = await getCompanyConfig(companyId)
     if (!config) {
       console.error('Webhook: company not found', companyId)
       return Response.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    saveCompanyConfig({
+    await saveCompanyConfig({
       ...config,
       subscriptionActive: true,
       stripeCustomerId: session.customer as string,
@@ -48,10 +48,10 @@ export async function POST(request: NextRequest) {
 
   if (event.type === 'customer.subscription.deleted' || event.type === 'customer.subscription.paused') {
     const sub = event.data.object as Stripe.Subscription
-    const all = getAllCompanyConfigs()
+    const all = await getAllCompanyConfigs()
     const config = all.find(c => c.stripeSubscriptionId === sub.id)
     if (config) {
-      saveCompanyConfig({ ...config, subscriptionActive: false })
+      await saveCompanyConfig({ ...config, subscriptionActive: false })
       console.log(`Subscription deactivated for ${config.id}`)
     }
   }

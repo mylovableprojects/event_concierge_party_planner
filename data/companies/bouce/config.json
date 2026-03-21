@@ -1,0 +1,20 @@
+{
+  "id": "bouce",
+  "name": "Bouce",
+  "tagline": "Find the perfect rentals",
+  "primaryColor": "#B03A3A",
+  "accentColor": "#E8A020",
+  "navyColor": "#1E2B3C",
+  "logoText": "BO",
+  "allowedOrigins": [
+    "*"
+  ],
+  "cartMode": "hidden",
+  "cartInquireUrl": "",
+  "webhookUrl": "",
+  "rules": [],
+  "yourName": "Judy parker",
+  "phone": "2263468190",
+  "email": "hello@thesocialparrot.com",
+  "passwordHash": "$2b$12$ARYXVLFgWDiE9/.kTgyroOATOmn3YROWzlmCBvvaTdvnsj8dGP6A6"
+}

@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Missing companyId' }, { status: 400 })
     }
 
-    const config = getCompanyConfig(companyId)
+    const config = await getCompanyConfig(companyId)
     if (!config) {
       return Response.json({ error: 'Company not found' }, { status: 404 })
     }

@@ -20,7 +20,7 @@ export async function POST() {
     const session = verifySession(token)
     if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const config = getCompanyConfig(session.companyId)
+    const config = await getCompanyConfig(session.companyId)
     if (!config) return Response.json({ error: 'Company not found' }, { status: 404 })
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)

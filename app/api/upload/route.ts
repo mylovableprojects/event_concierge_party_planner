@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Preserve all existing fields (auth, API keys, etc.) — only overwrite what the form sends
-    const existingConfig = getCompanyConfig(companyId)
+    const existingConfig = await getCompanyConfig(companyId)
     const config: CompanyConfig = {
       ...existingConfig,
       id: companyId,
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       rules,
       customInstructions: customInstructions || undefined,
     }
-    saveCompanyConfig(config)
+    await saveCompanyConfig(config)
 
     // CSV upload
     if (file) {
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       if (!items.length) {
         return Response.json({ error: 'No items could be parsed from the CSV' }, { status: 400 })
       }
-      saveInventory(companyId, items)
+      await saveInventory(companyId, items)
       return Response.json({ success: true, itemCount: items.length, config })
     }
 
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       if (!items.length) {
         return Response.json({ error: 'No items provided' }, { status: 400 })
       }
-      saveInventory(companyId, items)
+      await saveInventory(companyId, items)
       return Response.json({ success: true, itemCount: items.length, config })
     }
 

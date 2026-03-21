@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { kv } from '@vercel/kv'
 
 export interface InventoryItem {
   id: string
@@ -18,9 +19,9 @@ export type CartMode = 'enabled' | 'inquire' | 'hidden' | 'quote'
 
 export interface Rule {
   name: string
-  triggers: string[]      // keywords to detect in user messages
-  requiredTags: string[]  // inventory items must have ALL of these tags
-  message: string         // shown to customer explaining the filter
+  triggers: string[]
+  requiredTags: string[]
+  message: string
 }
 
 export interface CompanyConfig {
@@ -33,21 +34,17 @@ export interface CompanyConfig {
   logoText: string
   allowedOrigins: string[]
   cartMode: CartMode
-  cartInquireUrl: string   // used when cartMode = 'inquire'
+  cartInquireUrl: string
   rules: Rule[]
-  webhookUrl: string       // GHL (or any) inbound webhook URL for lead capture
-  customInstructions?: string  // Free-text instructions injected into the AI system prompt
-  // Auth fields (set at signup)
+  webhookUrl: string
+  customInstructions?: string
   yourName?: string
   phone?: string
   email?: string
   passwordHash?: string
-  // API key (AES-256-GCM encrypted — never stored or returned in plaintext)
   apiProvider?: 'anthropic' | 'openai'
   encryptedApiKey?: string
-  // Resend key (AES-256-GCM encrypted)
   encryptedResendKey?: string
-  // Stripe subscription
   stripeCustomerId?: string
   stripeSubscriptionId?: string
   subscriptionActive?: boolean
@@ -65,54 +62,136 @@ export interface Lead {
   estimatedValue: number
 }
 
+// ── Storage helpers ──────────────────────────────────────────────────────────
+
 const DATA_DIR = path.join(process.cwd(), 'data', 'companies')
 
-export function getCompanyConfig(companyId: string): CompanyConfig | null {
+/** Use KV when env vars are present (Vercel production), otherwise fall back to filesystem (local dev) */
+function hasKV(): boolean {
+  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+}
+
+function readFile<T>(filePath: string): T | null {
   try {
-    const configPath = path.join(DATA_DIR, companyId, 'config.json')
-    return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as T
   } catch {
     return null
   }
 }
 
-export function getInventory(companyId: string): InventoryItem[] {
-  try {
-    const inventoryPath = path.join(DATA_DIR, companyId, 'inventory.json')
-    return JSON.parse(fs.readFileSync(inventoryPath, 'utf-8'))
-  } catch {
-    return []
+function writeFile(filePath: string, data: unknown): void {
+  const dir = path.dirname(filePath)
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
+}
+
+// ── Company Config ───────────────────────────────────────────────────────────
+
+export async function getCompanyConfig(companyId: string): Promise<CompanyConfig | null> {
+  if (hasKV()) {
+    const fromKV = await kv.get<CompanyConfig>(`company:${companyId}:config`)
+    if (fromKV) return fromKV
+  }
+  // Fall back to filesystem for pre-committed data (demo, existing accounts)
+  return readFile<CompanyConfig>(path.join(DATA_DIR, companyId, 'config.json'))
+}
+
+export async function saveCompanyConfig(config: CompanyConfig): Promise<void> {
+  if (hasKV()) {
+    await kv.set(`company:${config.id}:config`, config)
+    await kv.sadd('companies:all', config.id)
+  } else {
+    writeFile(path.join(DATA_DIR, config.id, 'config.json'), config)
   }
 }
 
-export function saveInventory(companyId: string, items: InventoryItem[]): void {
-  const dir = path.join(DATA_DIR, companyId)
-  fs.mkdirSync(dir, { recursive: true })
-  fs.writeFileSync(path.join(dir, 'inventory.json'), JSON.stringify(items, null, 2))
-}
-
-export function getAllCompanyConfigs(): CompanyConfig[] {
+export async function getAllCompanyConfigs(): Promise<CompanyConfig[]> {
+  if (hasKV()) {
+    const ids = await kv.smembers('companies:all')
+    const configs = await Promise.all(ids.map(id => getCompanyConfig(String(id))))
+    return configs.filter((c): c is CompanyConfig => c !== null)
+  }
   try {
     const dirs = fs.readdirSync(DATA_DIR, { withFileTypes: true })
-    return dirs
-      .filter(d => d.isDirectory())
-      .map(d => getCompanyConfig(d.name))
-      .filter((c): c is CompanyConfig => c !== null)
+    const configs = await Promise.all(
+      dirs.filter(d => d.isDirectory()).map(d => getCompanyConfig(d.name))
+    )
+    return configs.filter((c): c is CompanyConfig => c !== null)
   } catch {
     return []
   }
 }
 
-export function saveCompanyConfig(config: CompanyConfig): void {
-  const dir = path.join(DATA_DIR, config.id)
-  fs.mkdirSync(dir, { recursive: true })
-  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(config, null, 2))
+export async function findCompanyByEmail(email: string): Promise<CompanyConfig | null> {
+  const lower = email.toLowerCase()
+  if (hasKV()) {
+    // Check KV index first
+    const ids = await kv.smembers('companies:all')
+    for (const id of ids) {
+      const config = await getCompanyConfig(String(id))
+      if (config?.email?.toLowerCase() === lower) return config
+    }
+    // Fall back to filesystem for pre-existing accounts not yet in KV
+    try {
+      const dirs = fs.readdirSync(DATA_DIR)
+      for (const id of dirs) {
+        const config = readFile<CompanyConfig>(path.join(DATA_DIR, id, 'config.json'))
+        if (config?.email?.toLowerCase() === lower) return config
+      }
+    } catch { /* ignore */ }
+    return null
+  }
+  // Local dev: scan filesystem
+  try {
+    const dirs = fs.readdirSync(DATA_DIR)
+    for (const id of dirs) {
+      const config = readFile<CompanyConfig>(path.join(DATA_DIR, id, 'config.json'))
+      if (config?.email?.toLowerCase() === lower) return config
+    }
+  } catch { /* ignore */ }
+  return null
 }
 
-/**
- * Detect which rules are triggered by the conversation text.
- * Returns the matched rules and the filtered inventory.
- */
+// ── Inventory ────────────────────────────────────────────────────────────────
+
+export async function getInventory(companyId: string): Promise<InventoryItem[]> {
+  if (hasKV()) {
+    const fromKV = await kv.get<InventoryItem[]>(`company:${companyId}:inventory`)
+    if (fromKV) return fromKV
+  }
+  return readFile<InventoryItem[]>(path.join(DATA_DIR, companyId, 'inventory.json')) ?? []
+}
+
+export async function saveInventory(companyId: string, items: InventoryItem[]): Promise<void> {
+  if (hasKV()) {
+    await kv.set(`company:${companyId}:inventory`, items)
+  } else {
+    writeFile(path.join(DATA_DIR, companyId, 'inventory.json'), items)
+  }
+}
+
+// ── Leads ────────────────────────────────────────────────────────────────────
+
+export async function saveLead(companyId: string, lead: Lead): Promise<void> {
+  if (hasKV()) {
+    const existing = await kv.get<Lead[]>(`company:${companyId}:leads`) ?? []
+    await kv.set(`company:${companyId}:leads`, [lead, ...existing])
+  } else {
+    const leadsPath = path.join(DATA_DIR, companyId, 'leads.json')
+    const existing: Lead[] = readFile<Lead[]>(leadsPath) ?? []
+    writeFile(leadsPath, [lead, ...existing])
+  }
+}
+
+export async function getLeads(companyId: string): Promise<Lead[]> {
+  if (hasKV()) {
+    return await kv.get<Lead[]>(`company:${companyId}:leads`) ?? []
+  }
+  return readFile<Lead[]>(path.join(DATA_DIR, companyId, 'leads.json')) ?? []
+}
+
+// ── Rules ────────────────────────────────────────────────────────────────────
+
 export function applyRules(
   inventory: InventoryItem[],
   rules: Rule[],
@@ -127,14 +206,11 @@ export function applyRules(
     return { activeRules: [], filteredInventory: inventory }
   }
 
-  // Collect all required tags across active rules
   const requiredTags = new Set(activeRules.flatMap(r => r.requiredTags.map(t => t.toLowerCase())))
-
   const filteredInventory = inventory.filter(item =>
     item.tags.some(tag => requiredTags.has(tag.toLowerCase()))
   )
 
-  // If filtering would remove everything, fall back to full inventory
   if (filteredInventory.length === 0) {
     return { activeRules, filteredInventory: inventory }
   }
@@ -142,68 +218,27 @@ export function applyRules(
   return { activeRules, filteredInventory }
 }
 
-export function saveLead(companyId: string, lead: Lead): void {
-  const dir = path.join(DATA_DIR, companyId)
-  fs.mkdirSync(dir, { recursive: true })
-  const leadsPath = path.join(dir, 'leads.json')
-  const existing: Lead[] = (() => {
-    try { return JSON.parse(fs.readFileSync(leadsPath, 'utf-8')) } catch { return [] }
-  })()
-  existing.unshift(lead)
-  fs.writeFileSync(leadsPath, JSON.stringify(existing, null, 2))
-}
+// ── CSV Parser ───────────────────────────────────────────────────────────────
 
-export function getLeads(companyId: string): Lead[] {
-  try {
-    const leadsPath = path.join(DATA_DIR, companyId, 'leads.json')
-    return JSON.parse(fs.readFileSync(leadsPath, 'utf-8'))
-  } catch {
-    return []
-  }
-}
-
-export function listCompanies(): string[] {
-  try {
-    return fs.readdirSync(DATA_DIR)
-  } catch {
-    return []
-  }
-}
-
-export function findCompanyByEmail(email: string): CompanyConfig | null {
-  const lower = email.toLowerCase()
-  for (const id of listCompanies()) {
-    const config = getCompanyConfig(id)
-    if (config?.email?.toLowerCase() === lower) return config
-  }
-  return null
-}
-
-/**
- * RFC 4180-compliant CSV row parser.
- * Handles quoted fields, commas inside quotes, and escaped double-quotes ("").
- */
 function parseCSVRow(line: string): string[] {
   const cells: string[] = []
   let i = 0
   while (i < line.length) {
     if (line[i] === '"') {
-      // Quoted field
       let val = ''
-      i++ // skip opening quote
+      i++
       while (i < line.length) {
         if (line[i] === '"' && line[i + 1] === '"') {
           val += '"'; i += 2
         } else if (line[i] === '"') {
-          i++; break // closing quote
+          i++; break
         } else {
           val += line[i++]
         }
       }
       cells.push(val.trim())
-      if (line[i] === ',') i++ // skip comma
+      if (line[i] === ',') i++
     } else {
-      // Unquoted field
       const end = line.indexOf(',', i)
       if (end === -1) {
         cells.push(line.slice(i).trim())
@@ -216,9 +251,6 @@ function parseCSVRow(line: string): string[] {
   return cells
 }
 
-/**
- * Split CSV text into rows, respecting quoted newlines.
- */
 function splitCSVRows(csv: string): string[] {
   const rows: string[] = []
   let current = ''
@@ -238,41 +270,32 @@ function splitCSVRows(csv: string): string[] {
   return rows
 }
 
-/**
- * Parse a CSV string into inventory items.
- * Uses fuzzy column name matching so exports from most booking software
- * are accepted without manual formatting.
- */
 export function parseInventoryCSV(csv: string): InventoryItem[] {
   const rows = splitCSVRows(csv.trim())
   if (rows.length < 2) return []
 
   const rawHeaders = parseCSVRow(rows[0]).map(h => h.toLowerCase())
-
-  // Fuzzy column mapper
   const col = (candidates: string[]): number =>
     rawHeaders.findIndex(h => candidates.some(c => h.includes(c)))
 
-  const nameIdx      = col(['name', 'item', 'product', 'rental', 'title'])
-  const descIdx      = col(['description', 'desc', 'details', 'notes', 'about'])
-  const priceIdx     = col(['price', 'rate', 'cost', 'amount'])
-  const categoryIdx  = col(['category', 'type', 'group', 'class'])
-  const tagsIdx      = col(['tags', 'keywords', 'labels'])
-  const ageMinIdx    = col(['age_min', 'minage', 'min age', 'age min', 'minimum age'])
-  const ageMaxIdx    = col(['age_max', 'maxage', 'max age', 'age max', 'maximum age'])
-  const capacityIdx  = col(['capacity', 'guests', 'max guests', 'guest count', 'max_guests'])
-  const imageIdx     = col(['image', 'photo', 'img', 'picture', 'url'])
+  const nameIdx     = col(['name', 'item', 'product', 'rental', 'title'])
+  const descIdx     = col(['description', 'desc', 'details', 'notes', 'about'])
+  const priceIdx    = col(['price', 'rate', 'cost', 'amount'])
+  const categoryIdx = col(['category', 'type', 'group', 'class'])
+  const tagsIdx     = col(['tags', 'keywords', 'labels'])
+  const ageMinIdx   = col(['age_min', 'minage', 'min age', 'age min', 'minimum age'])
+  const ageMaxIdx   = col(['age_max', 'maxage', 'max age', 'age max', 'maximum age'])
+  const capacityIdx = col(['capacity', 'guests', 'max guests', 'guest count', 'max_guests'])
+  const imageIdx    = col(['image', 'photo', 'img', 'picture', 'url'])
 
   const items: InventoryItem[] = []
 
   for (let i = 1; i < rows.length; i++) {
     const cells = parseCSVRow(rows[i])
     if (cells.every(c => !c)) continue
-
     const rawPrice = priceIdx >= 0 ? cells[priceIdx].replace(/[$,]/g, '') : '0'
     const name = nameIdx >= 0 ? cells[nameIdx] : `Item ${i}`
     if (!name) continue
-
     items.push({
       id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
       name,

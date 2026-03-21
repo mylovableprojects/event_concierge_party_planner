@@ -10,7 +10,7 @@ export async function GET() {
     const session = verifySession(token)
     if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const inventory = getInventory(session.companyId)
+    const inventory = await getInventory(session.companyId)
     return Response.json({ inventory })
   } catch (err) {
     console.error('GET inventory error:', err)
@@ -26,7 +26,7 @@ export async function PUT(request: Request) {
     const session = verifySession(token)
     if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const config = getCompanyConfig(session.companyId)
+    const config = await getCompanyConfig(session.companyId)
     if (!config) return Response.json({ error: 'Company not found' }, { status: 404 })
 
     const { inventory } = await request.json() as { inventory: InventoryItem[] }
@@ -34,7 +34,7 @@ export async function PUT(request: Request) {
       return Response.json({ error: 'inventory must be an array' }, { status: 400 })
     }
 
-    saveInventory(session.companyId, inventory)
+    await saveInventory(session.companyId, inventory)
     return Response.json({ success: true, itemCount: inventory.length })
   } catch (err) {
     console.error('PUT inventory error:', err)

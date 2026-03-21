@@ -23,16 +23,16 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Company name is invalid.' }, { status: 400 })
     }
 
-    if (getCompanyConfig(companyId)) {
+    if (await getCompanyConfig(companyId)) {
       return Response.json({ error: 'A company with that name already exists. Try adding your city or a unique word.' }, { status: 409 })
     }
-    if (findCompanyByEmail(email.trim())) {
+    if (await findCompanyByEmail(email.trim())) {
       return Response.json({ error: 'An account with that email already exists.' }, { status: 409 })
     }
 
     const passwordHash = await bcrypt.hash(password, 12)
 
-    saveCompanyConfig({
+    await saveCompanyConfig({
       id: companyId,
       name: companyName.trim(),
       tagline: 'Find the perfect rentals',
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       email: email.trim().toLowerCase(),
       passwordHash,
     })
-    saveInventory(companyId, [])
+    await saveInventory(companyId, [])
 
     // Fire HighLevel webhook (non-blocking)
     fetch('https://services.leadconnectorhq.com/hooks/1jQA3wVVe39Qvmd8gF84/webhook-trigger/74b18f8c-5da8-428b-8f3b-5beddb12e990', {
@@ -68,7 +68,6 @@ export async function POST(request: Request) {
       }),
     }).catch(err => console.error('HighLevel webhook error:', err))
 
-    // Create session cookie so admin works after payment returns
     const token = signSession(companyId, email.trim().toLowerCase())
     const res = NextResponse.json({ success: true, companyId, needsPayment: true })
     res.cookies.set(sessionCookieOptions(token))

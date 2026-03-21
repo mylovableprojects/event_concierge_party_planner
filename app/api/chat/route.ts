@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Missing messages or companyId' }, { status: 400 })
     }
 
-    const config = getCompanyConfig(companyId)
+    const config = await getCompanyConfig(companyId)
     if (!config) {
       return Response.json({ error: 'Company not found' }, { status: 404 })
     }
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const inventory = getInventory(companyId)
+    const inventory = await getInventory(companyId)
     if (!inventory.length) {
       return Response.json({ error: 'No inventory found for this company' }, { status: 404 })
     }

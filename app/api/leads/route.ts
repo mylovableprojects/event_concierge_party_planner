@@ -10,7 +10,7 @@ export async function GET() {
     const session = verifySession(token)
     if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const leads = getLeads(session.companyId)
+    const leads = await getLeads(session.companyId)
     return Response.json({ leads })
   } catch (err) {
     console.error('GET leads error:', err)

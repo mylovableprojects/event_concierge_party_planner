@@ -24,10 +24,10 @@ export async function POST(request: Request) {
       return Response.json({ error: `Key validation failed: ${msg}` }, { status: 422 })
     }
 
-    const config = getCompanyConfig(session.companyId)
+    const config = await getCompanyConfig(session.companyId)
     if (!config) return Response.json({ error: 'Company not found' }, { status: 404 })
 
-    saveCompanyConfig({ ...config, encryptedResendKey: encrypt(apiKey.trim()) })
+    await saveCompanyConfig({ ...config, encryptedResendKey: encrypt(apiKey.trim()) })
     return Response.json({ success: true })
   } catch (err) {
     console.error('Update Resend key error:', err)

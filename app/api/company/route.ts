@@ -8,12 +8,12 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: 'Missing company id' }, { status: 400 })
   }
 
-  const config = getCompanyConfig(companyId)
+  const config = await getCompanyConfig(companyId)
   if (!config) {
     return Response.json({ error: 'Company not found' }, { status: 404 })
   }
 
-  const inventory = getInventory(companyId)
+  const inventory = await getInventory(companyId)
 
   return Response.json({ config, inventory })
 }

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'companyId, firstName, and phone are required' }, { status: 400 })
     }
 
-    const config = getCompanyConfig(companyId)
+    const config = await getCompanyConfig(companyId)
     if (!config) {
       return Response.json({ error: 'Company not found' }, { status: 404 })
     }
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const estimatedValue = interestedItems.reduce((sum, i) => sum + i.price, 0)
 
     // 1. Always save lead locally
-    saveLead(companyId, {
+    await saveLead(companyId, {
       id: randomUUID(),
       createdAt: new Date().toISOString(),
       firstName,
