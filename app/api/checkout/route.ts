@@ -5,7 +5,7 @@ import { getCompanyConfig } from '@/lib/inventory'
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 
 const APP_URL = 'https://concierge.thepartyrentaltoolkit.com'
-const PRICE_ID = 'price_1SzJDHGobXm0JvyhXJcPwvZ0'
+const PRICE_ID = 'price_1TDRImGobXm0JvyhYs14SOti'
 
 export async function POST(request: NextRequest) {
   try {
