@@ -1013,6 +1013,9 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
             )}
           </div>
 
+          {/* Inventory Editor */}
+          <InventoryEditor />
+
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">{error}</div>
           )}
@@ -1092,6 +1095,285 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
         </div>
 
       </div>
+    </div>
+  )
+}
+
+const CATEGORIES = ['Inflatables', 'Water', 'Concessions', 'Furniture', 'Tents', 'Games', 'Entertainment', 'Toddler', 'Party Supplies', 'Other']
+
+interface EditableItem {
+  id: string
+  name: string
+  description: string
+  price: number
+  category: string
+  tags: string       // semicolon-separated for editing
+  ageMin: number
+  ageMax: number
+  guestCapacity: number
+  image: string
+}
+
+function InventoryEditor() {
+  const [open, setOpen] = useState(false)
+  const [items, setItems] = useState<EditableItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveMsg, setSaveMsg] = useState('')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [dirty, setDirty] = useState(false)
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/inventory')
+      const data = await res.json()
+      setItems((data.inventory || []).map((item: EditableItem & { tags: string[] }) => ({
+        ...item,
+        tags: Array.isArray(item.tags) ? item.tags.join('; ') : (item.tags || ''),
+      })))
+      setDirty(false)
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggle = () => {
+    if (!open) load()
+    setOpen(o => !o)
+  }
+
+  const update = (id: string, field: keyof EditableItem, value: string | number) => {
+    setItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item))
+    setDirty(true)
+    setSaveMsg('')
+  }
+
+  const deleteItem = (id: string) => {
+    setItems(prev => prev.filter(item => item.id !== id))
+    setDirty(true)
+    setSaveMsg('')
+    if (expandedId === id) setExpandedId(null)
+  }
+
+  const addItem = () => {
+    const newId = `item-${Date.now()}`
+    setItems(prev => [...prev, {
+      id: newId, name: '', description: '', price: 0,
+      category: 'Other', tags: '', ageMin: 1, ageMax: 99,
+      guestCapacity: 50, image: '',
+    }])
+    setExpandedId(newId)
+    setDirty(true)
+  }
+
+  const save = async () => {
+    setSaving(true)
+    setSaveMsg('')
+    try {
+      const payload = items.map(item => ({
+        ...item,
+        price: Number(item.price) || 0,
+        ageMin: Number(item.ageMin) || 1,
+        ageMax: Number(item.ageMax) || 99,
+        guestCapacity: Number(item.guestCapacity) || 50,
+        tags: item.tags.split(';').map((t: string) => t.trim()).filter(Boolean),
+      }))
+      const res = await fetch('/api/inventory', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inventory: payload }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setSaveMsg(`Saved ${data.itemCount} items`)
+      setDirty(false)
+    } catch (err) {
+      setSaveMsg(err instanceof Error ? err.message : 'Save failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-2xl overflow-hidden">
+      <button
+        type="button"
+        onClick={toggle}
+        className="w-full flex items-center justify-between px-5 py-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+      >
+        <div>
+          <span className="font-semibold text-gray-800 text-sm">Edit Existing Inventory</span>
+          <span className="text-xs text-gray-500 ml-2">Edit, add tags, update prices, or delete items</span>
+        </div>
+        <svg
+          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+        >
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div className="p-4 space-y-3">
+          {loading && <p className="text-sm text-gray-400 text-center py-4">Loading inventory...</p>}
+
+          {!loading && items.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-4">No inventory yet. Upload a CSV or add items manually above.</p>
+          )}
+
+          {!loading && items.length > 0 && (
+            <div className="space-y-1.5">
+              {items.map(item => (
+                <div key={item.id} className="border border-gray-100 rounded-xl overflow-hidden">
+                  {/* Row header */}
+                  <div
+                    className="flex items-center gap-3 px-3 py-2.5 bg-white cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                      className={`text-gray-300 shrink-0 transition-transform ${expandedId === item.id ? 'rotate-90' : ''}`}>
+                      <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-800 truncate block">
+                        {item.name || <span className="text-gray-400 italic">Untitled item</span>}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {item.category}
+                        {item.tags ? ` · ${item.tags}` : ''}
+                      </span>
+                    </div>
+                    <span className="text-sm font-bold text-gray-700 shrink-0">${item.price}</span>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); deleteItem(item.id) }}
+                      className="text-gray-300 hover:text-red-400 transition-colors shrink-0 p-1"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Expanded edit fields */}
+                  {expandedId === item.id && (
+                    <div className="px-4 pb-4 pt-2 bg-gray-50 border-t border-gray-100 grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
+                        <input
+                          value={item.name}
+                          onChange={e => update(item.id, 'name', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Price ($)</label>
+                        <input
+                          type="number" min="0"
+                          value={item.price}
+                          onChange={e => update(item.id, 'price', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                        <select
+                          value={item.category}
+                          onChange={e => update(item.id, 'category', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Tags <span className="font-normal text-gray-400">(semicolon-separated, e.g. tssa; outdoor)</span>
+                        </label>
+                        <input
+                          value={item.tags}
+                          onChange={e => update(item.id, 'tags', e.target.value)}
+                          placeholder="tssa; outdoor; water"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                        <textarea
+                          value={item.description}
+                          onChange={e => update(item.id, 'description', e.target.value)}
+                          rows={2}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Min Age</label>
+                        <input type="number" min="0" value={item.ageMin}
+                          onChange={e => update(item.id, 'ageMin', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Max Age</label>
+                        <input type="number" min="0" value={item.ageMax}
+                          onChange={e => update(item.id, 'ageMax', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Guest Capacity</label>
+                        <input type="number" min="0" value={item.guestCapacity}
+                          onChange={e => update(item.id, 'guestCapacity', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Image URL</label>
+                        <input
+                          value={item.image}
+                          onChange={e => update(item.id, 'image', e.target.value)}
+                          placeholder="https://..."
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && (
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={addItem}
+                className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50 transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Item
+              </button>
+              <div className="flex items-center gap-3">
+                {saveMsg && (
+                  <span className={`text-xs font-medium ${saveMsg.startsWith('Saved') ? 'text-green-600' : 'text-red-600'}`}>
+                    {saveMsg.startsWith('Saved') ? '✓ ' : '✗ '}{saveMsg}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={save}
+                  disabled={!dirty || saving}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 disabled:opacity-40 transition-colors"
+                >
+                  {saving ? 'Saving...' : 'Save Inventory'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
