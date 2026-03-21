@@ -73,10 +73,10 @@ export default function Home() {
               <span className="font-semibold text-[#1E2B3C] text-sm tracking-tight">Event Concierge</span>
             </div>
             <a
-              href="/admin"
+              href="/signup"
               className="px-4 py-2 rounded-lg bg-[#1E2B3C] text-white text-sm font-semibold hover:bg-[#2a3d55] transition-colors"
             >
-              Set up your company →
+              Get started →
             </a>
           </div>
         </nav>
@@ -127,10 +127,10 @@ export default function Home() {
                 Open Widget Demo
               </a>
               <a
-                href="/admin"
+                href="/signup"
                 className="px-7 py-3.5 rounded-xl bg-[#1E2B3C] text-white font-semibold text-sm hover:bg-[#2a3d55] transition-colors"
               >
-                Set Up Your Company →
+                Get Started — $297/yr →
               </a>
             </div>
 
@@ -312,6 +312,62 @@ export default function Home() {
 
         <div className="gold-line" />
 
+        {/* ── PRICING ────────────────────────────────────────────── */}
+        <section className="py-24 px-6">
+          <div className="max-w-lg mx-auto text-center">
+            <p className="text-[#B03A3A] text-sm font-semibold tracking-widest uppercase mb-3">Simple pricing</p>
+            <h2 className="font-display text-4xl sm:text-5xl font-bold text-[#1E2B3C] leading-tight mb-4">
+              One plan. Everything included.
+            </h2>
+            <p className="text-gray-500 text-lg mb-12">No per-conversation fees. No usage caps. Just results.</p>
+
+            <div className="relative bg-white rounded-3xl shadow-xl border border-[#1E2B3C]/10 p-8 text-left">
+              {/* Badge */}
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#E8A020] text-white text-[10px] font-bold tracking-widest uppercase px-4 py-1.5 rounded-full whitespace-nowrap badge-glow">
+                Best value for rental companies
+              </div>
+
+              {/* Price */}
+              <div className="flex items-end gap-2 mb-1 mt-2">
+                <span className="font-display text-6xl font-bold text-[#1E2B3C]">$297</span>
+                <span className="text-gray-400 text-lg mb-2">/year</span>
+              </div>
+              <p className="text-gray-400 text-sm mb-8">That&apos;s less than <strong className="text-[#1E2B3C]">$25/month</strong> — less than one lost rental.</p>
+
+              {/* Features */}
+              <ul className="space-y-3 mb-8">
+                {[
+                  'AI chat widget on your website',
+                  'Full inventory management',
+                  'Lead capture + email notifications',
+                  'All 4 cart modes included',
+                  'Custom branding & colors',
+                  'Go HighLevel / CRM webhook',
+                  'Unlimited conversations',
+                  'Use your own AI API key',
+                ].map(f => (
+                  <li key={f} className="flex items-center gap-3 text-sm text-gray-700">
+                    <svg className="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8A020" strokeWidth="2.5">
+                      <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <a
+                href="/signup"
+                className="cta-pulse block w-full text-center px-8 py-4 rounded-xl bg-[#B03A3A] text-white font-semibold text-base hover:bg-[#9a3232] transition-colors shadow-lg shadow-[#B03A3A]/25"
+              >
+                Get started — $297/year →
+              </a>
+              <p className="text-center text-xs text-gray-400 mt-4">Secure payment via Stripe · Cancel anytime</p>
+            </div>
+          </div>
+        </section>
+
+        <div className="gold-line" />
+
         {/* ── BOTTOM CTA ─────────────────────────────────────────── */}
         <section className="py-24 px-6">
           <div className="max-w-2xl mx-auto text-center">
@@ -329,14 +385,14 @@ export default function Home() {
               Set up takes less than 10 minutes. Upload your inventory, grab your embed code, and your AI rental concierge is live.
             </p>
             <a
-              href="/admin"
+              href="/signup"
               className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-[#B03A3A] text-white font-semibold text-base hover:bg-[#9a3232] transition-colors shadow-lg shadow-[#B03A3A]/25"
             >
-              Set Up Your Company — It&apos;s Free
+              Get started for $297/year
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
             <p className="mt-5 text-xs text-gray-400">
-              Powered by Claude AI · One <code className="bg-gray-100 px-1 rounded">&lt;script&gt;</code> tag · No monthly fees for setup
+              Powered by Claude AI · Secure checkout via Stripe · Less than $25/month
             </p>
           </div>
         </section>
