@@ -209,22 +209,30 @@ export async function getLeads(companyId: string): Promise<Lead[]> {
 export function applyRules(
   inventory: InventoryItem[],
   rules: Rule[],
-  conversationText: string
+  conversationText: string,
+  userMessagesOnly?: string
 ): { activeRules: Rule[]; filteredInventory: InventoryItem[] } {
-  const lower = conversationText.toLowerCase()
+  // Only trigger rules from user messages, not assistant messages
+  const triggerText = (userMessagesOnly ?? conversationText).toLowerCase()
+
   const activeRules = rules.filter(rule =>
-    rule.triggers.some(trigger => lower.includes(trigger.toLowerCase()))
+    rule.triggers.some(trigger => triggerText.includes(trigger.toLowerCase()))
   )
 
   if (activeRules.length === 0) {
     return { activeRules: [], filteredInventory: inventory }
   }
 
-  const requiredTags = new Set(activeRules.flatMap(r => r.requiredTags.map(t => t.toLowerCase())))
-  const filteredInventory = inventory.filter(item =>
-    item.tags.some(tag => requiredTags.has(tag.toLowerCase()))
-  )
+  // Each active rule requires ALL of its requiredTags to be present on an item
+  const filteredInventory = inventory.filter(item => {
+    const itemTags = item.tags.map(t => t.toLowerCase())
+    return activeRules.every(rule =>
+      rule.requiredTags.every(required => itemTags.includes(required.toLowerCase()))
+    )
+  })
 
+  // Conservative fallback: if filtering removes everything, return full inventory
+  // but keep the rules active so Claude knows the constraint
   if (filteredInventory.length === 0) {
     return { activeRules, filteredInventory: inventory }
   }

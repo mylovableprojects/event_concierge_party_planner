@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
     }
 
     const conversationText = messages.map(m => m.content).join(' ')
-    const { activeRules, filteredInventory } = applyRules(inventory, config.rules || [], conversationText)
+    const userText = messages.filter(m => m.role === 'user').map(m => m.content).join(' ')
+    const { activeRules, filteredInventory } = applyRules(inventory, config.rules || [], conversationText, userText)
 
     const result = provider === 'openai'
       ? await getRecommendationsOpenAI(messages, filteredInventory, config.name, apiKey, activeRules, config.customInstructions)
