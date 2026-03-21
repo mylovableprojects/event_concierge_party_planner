@@ -1148,6 +1148,9 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
           </div>
         )}
 
+        {/* Leads Panel */}
+        <LeadsPanel />
+
         <div className="bg-amber-50 border border-amber-100 rounded-2xl px-5 py-4 text-sm text-amber-800">
           <strong>Demo:</strong> Pre-loaded inventory under company ID <code className="bg-amber-100 px-1 rounded">demo</code> with a TSSA rule active.
           Visit <a href="/widget?company=demo" target="_blank" className="underline">/widget?company=demo</a> — try typing &quot;school picnic&quot; to see the rule filter in action.
@@ -1430,6 +1433,238 @@ function InventoryEditor() {
                 </button>
               </div>
             </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface Lead {
+  id: string
+  createdAt: string
+  firstName: string
+  phone: string
+  email?: string
+  eventDate?: string
+  eventDescription: string
+  interestedItems: Array<{ name: string; price: number }>
+  estimatedValue: number
+}
+
+function LeadsPanel() {
+  const [leads, setLeads] = useState<Lead[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/leads')
+      const data = await res.json()
+      setLeads(data.leads || [])
+    } catch {
+      setLeads([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggle = () => {
+    if (!open) load()
+    setOpen(o => !o)
+  }
+
+  const exportCSV = () => {
+    if (!leads?.length) return
+    const header = ['Date', 'Name', 'Phone', 'Email', 'Event Date', 'Event Description', 'Items', 'Estimated Value']
+    const rows = leads.map(l => [
+      new Date(l.createdAt).toLocaleDateString(),
+      l.firstName,
+      l.phone,
+      l.email || '',
+      l.eventDate || '',
+      `"${l.eventDescription.replace(/"/g, '""')}"`,
+      `"${l.interestedItems.map(i => `${i.name} ($${i.price})`).join(', ').replace(/"/g, '""')}"`,
+      `$${l.estimatedValue}`,
+    ])
+    const csv = [header, ...rows].map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const totalValue = leads?.reduce((s, l) => s + l.estimatedValue, 0) ?? 0
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Header */}
+      <button
+        type="button"
+        onClick={toggle}
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors text-left"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-[#1E2B3C] flex items-center justify-center shrink-0">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+          </div>
+          <div>
+            <div className="font-semibold text-gray-900 text-sm">Leads</div>
+            <div className="text-xs text-gray-500">
+              {leads === null ? 'Click to load' : `${leads.length} lead${leads.length !== 1 ? 's' : ''}${leads.length > 0 ? ` · $${totalValue.toLocaleString()} estimated value` : ''}`}
+            </div>
+          </div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+          className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div className="border-t border-gray-100">
+          {loading && (
+            <div className="px-6 py-8 text-center text-sm text-gray-400">Loading leads...</div>
+          )}
+
+          {!loading && leads?.length === 0 && (
+            <div className="px-6 py-10 text-center">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-500">No leads yet</p>
+              <p className="text-xs text-gray-400 mt-1">Leads will appear here when customers fill out the form in your widget.</p>
+            </div>
+          )}
+
+          {!loading && leads && leads.length > 0 && (
+            <>
+              {/* Stats bar */}
+              <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100">
+                {[
+                  { label: 'Total Leads', value: leads.length },
+                  { label: 'Est. Pipeline', value: `$${totalValue.toLocaleString()}` },
+                  { label: 'Avg. Value', value: `$${Math.round(totalValue / leads.length).toLocaleString()}` },
+                ].map(stat => (
+                  <div key={stat.label} className="px-4 py-3 text-center">
+                    <div className="text-lg font-bold text-gray-900">{stat.value}</div>
+                    <div className="text-xs text-gray-400">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Lead rows */}
+              <div className="divide-y divide-gray-50">
+                {leads.map(lead => (
+                  <div key={lead.id}>
+                    <div
+                      className="flex items-center gap-3 px-5 py-3.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => setExpanded(expanded === lead.id ? null : lead.id)}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#B03A3A]/10 flex items-center justify-center shrink-0 text-xs font-bold text-[#B03A3A]">
+                        {lead.firstName.slice(0, 1).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-gray-900">{lead.firstName}</div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {lead.phone}{lead.eventDate ? ` · ${lead.eventDate}` : ''}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-bold text-gray-800">${lead.estimatedValue.toLocaleString()}</div>
+                        <div className="text-xs text-gray-400">{new Date(lead.createdAt).toLocaleDateString()}</div>
+                      </div>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                        className={`text-gray-300 transition-transform shrink-0 ${expanded === lead.id ? 'rotate-90' : ''}`}>
+                        <polyline points="9 18 15 12 9 6"/>
+                      </svg>
+                    </div>
+
+                    {expanded === lead.id && (
+                      <div className="px-5 pb-4 pt-1 bg-gray-50 border-t border-gray-100 space-y-3">
+                        {/* Contact */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div><span className="text-gray-400">Phone</span><div className="font-medium text-gray-800 mt-0.5">{lead.phone}</div></div>
+                          {lead.email && <div><span className="text-gray-400">Email</span><div className="font-medium text-gray-800 mt-0.5">{lead.email}</div></div>}
+                          {lead.eventDate && <div><span className="text-gray-400">Event Date</span><div className="font-medium text-gray-800 mt-0.5">{lead.eventDate}</div></div>}
+                        </div>
+
+                        {/* Event description */}
+                        {lead.eventDescription && (
+                          <div>
+                            <div className="text-xs text-gray-400 mb-1">Event Description</div>
+                            <div className="text-xs text-gray-700 leading-relaxed bg-white rounded-lg px-3 py-2 border border-gray-100">{lead.eventDescription}</div>
+                          </div>
+                        )}
+
+                        {/* Items */}
+                        {lead.interestedItems.length > 0 && (
+                          <div>
+                            <div className="text-xs text-gray-400 mb-1">Interested Items</div>
+                            <div className="bg-white rounded-lg border border-gray-100 overflow-hidden divide-y divide-gray-50">
+                              {lead.interestedItems.map((item, i) => (
+                                <div key={i} className="flex items-center justify-between px-3 py-2">
+                                  <span className="text-xs text-gray-700">{item.name}</span>
+                                  <span className="text-xs font-semibold text-gray-800">${item.price}</span>
+                                </div>
+                              ))}
+                              <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
+                                <span className="text-xs font-semibold text-gray-600">Estimated Total</span>
+                                <span className="text-xs font-bold text-[#B03A3A]">${lead.estimatedValue.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Quick actions */}
+                        <div className="flex gap-2 pt-1">
+                          <a href={`tel:${lead.phone}`}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E2B3C] text-white text-xs font-semibold hover:bg-[#2a3d55] transition-colors">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                            </svg>
+                            Call
+                          </a>
+                          {lead.email && (
+                            <a href={`mailto:${lead.email}`}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-50 transition-colors">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                              </svg>
+                              Email
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Export */}
+              <div className="px-5 py-3 border-t border-gray-100 flex justify-end">
+                <button
+                  type="button"
+                  onClick={exportCSV}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-800 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Export CSV
+                </button>
+              </div>
+            </>
           )}
         </div>
       )}
