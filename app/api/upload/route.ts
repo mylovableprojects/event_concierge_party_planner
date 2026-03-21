@@ -45,12 +45,23 @@ export async function POST(request: NextRequest) {
     }
     saveCompanyConfig(config)
 
-    // If a CSV was uploaded, parse and save inventory
+    // CSV upload
     if (file) {
       const text = await file.text()
       const items = parseInventoryCSV(text)
       if (!items.length) {
         return Response.json({ error: 'No items could be parsed from the CSV' }, { status: 400 })
+      }
+      saveInventory(companyId, items)
+      return Response.json({ success: true, itemCount: items.length, config })
+    }
+
+    // AI-parsed or manually entered items sent as JSON
+    const itemsRaw = formData.get('items') as string | null
+    if (itemsRaw) {
+      const items = JSON.parse(itemsRaw) as InventoryItem[]
+      if (!items.length) {
+        return Response.json({ error: 'No items provided' }, { status: 400 })
       }
       saveInventory(companyId, items)
       return Response.json({ success: true, itemCount: items.length, config })

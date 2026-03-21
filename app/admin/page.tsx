@@ -1,12 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 interface Rule {
   name: string
   triggers: string
   requiredTags: string
   message: string
+}
+
+interface ParsedItem {
+  id: string
+  name: string
+  description: string
+  price: number
+  category: string
+  tags: string[]
+  ageMin: number
+  ageMax: number
+  guestCapacity: number
+  image: string
 }
 
 interface SetupResult {
@@ -24,6 +37,8 @@ const DEFAULT_RULES: Rule[] = [
   },
 ]
 
+type InventoryTab = 'csv' | 'text' | 'photo' | 'manual'
+
 export default function AdminPage() {
   const [companyId, setCompanyId] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -34,15 +49,83 @@ export default function AdminPage() {
   const [cartInquireUrl, setCartInquireUrl] = useState('')
   const [webhookUrl, setWebhookUrl] = useState('')
   const [rules, setRules] = useState<Rule[]>([])
+
+  // Inventory input
+  const [inventoryTab, setInventoryTab] = useState<InventoryTab>('csv')
   const [file, setFile] = useState<File | null>(null)
+  const [aiText, setAiText] = useState('')
+  const [aiImage, setAiImage] = useState<{ data: string; mediaType: string; preview: string } | null>(null)
+  const [parsedItems, setParsedItems] = useState<ParsedItem[] | null>(null)
+  const [parsing, setParsing] = useState(false)
+  const [parseError, setParseError] = useState('')
+  const [manualItems, setManualItems] = useState<ParsedItem[]>([])
+  const [manualForm, setManualForm] = useState({ name: '', price: '', category: 'Inflatables', description: '', tags: '' })
+
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<SetupResult | null>(null)
   const [error, setError] = useState('')
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   const addRule = () => setRules(prev => [...prev, { name: '', triggers: '', requiredTags: '', message: '' }])
   const removeRule = (i: number) => setRules(prev => prev.filter((_, idx) => idx !== i))
   const updateRule = (i: number, field: keyof Rule, value: string) =>
     setRules(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r))
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      const mediaType = dataUrl.match(/data:([^;]+)/)?.[1] || 'image/jpeg'
+      const data = dataUrl.split(',')[1]
+      setAiImage({ data, mediaType, preview: dataUrl })
+      setParsedItems(null)
+      setParseError('')
+    }
+    reader.readAsDataURL(f)
+  }
+
+  const parseWithAI = async (mode: 'text' | 'photo') => {
+    setParsing(true)
+    setParsedItems(null)
+    setParseError('')
+    try {
+      const body = mode === 'text'
+        ? { mode: 'text', content: aiText }
+        : { mode: 'image', data: aiImage!.data, mediaType: aiImage!.mediaType }
+      const res = await fetch('/api/parse-inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to parse')
+      setParsedItems(data.items)
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  const addManualItem = () => {
+    if (!manualForm.name.trim()) return
+    const item: ParsedItem = {
+      id: manualForm.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+      name: manualForm.name.trim(),
+      description: manualForm.description.trim(),
+      price: parseFloat(manualForm.price) || 0,
+      category: manualForm.category || 'Other',
+      tags: manualForm.tags.split(';').map(t => t.trim()).filter(Boolean),
+      ageMin: 1,
+      ageMax: 99,
+      guestCapacity: 50,
+      image: '',
+    }
+    setManualItems(prev => [...prev, item])
+    setManualForm({ name: '', price: '', category: manualForm.category, description: '', tags: '' })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,7 +151,14 @@ export default function AdminPage() {
     fd.append('cartInquireUrl', cartInquireUrl)
     fd.append('webhookUrl', webhookUrl)
     fd.append('rules', JSON.stringify(serializedRules))
-    if (file) fd.append('file', file)
+
+    if (inventoryTab === 'csv' && file) {
+      fd.append('file', file)
+    } else if ((inventoryTab === 'text' || inventoryTab === 'photo') && parsedItems?.length) {
+      fd.append('items', JSON.stringify(parsedItems))
+    } else if (inventoryTab === 'manual' && manualItems.length) {
+      fd.append('items', JSON.stringify(manualItems))
+    }
 
     try {
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
@@ -86,6 +176,32 @@ export default function AdminPage() {
   const embedCode = result
     ? `<script src="${origin}/embed.js" data-company="${result.companyId}"></script>`
     : null
+
+  const TABS: { id: InventoryTab; label: string; icon: React.ReactNode }[] = [
+    {
+      id: 'csv',
+      label: 'CSV Upload',
+      icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+    },
+    {
+      id: 'text',
+      label: 'Describe / Paste',
+      icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
+    },
+    {
+      id: 'photo',
+      label: 'Photo / Image',
+      icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
+    },
+    {
+      id: 'manual',
+      label: 'Add Manually',
+      icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+    },
+  ]
+
+  const itemsForTab = inventoryTab === 'manual' ? manualItems : (parsedItems ?? [])
+  const itemCount = inventoryTab === 'csv' ? null : itemsForTab.length
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -249,18 +365,18 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Trigger Keywords <span className="font-normal text-gray-400">(comma-separated — detected in customer messages)</span>
+                    Trigger Keywords <span className="font-normal text-gray-400">(comma-separated)</span>
                   </label>
                   <input
                     value={rule.triggers}
                     onChange={e => updateRule(i, 'triggers', e.target.value)}
-                    placeholder="church, school, corporate, company picnic, municipality"
+                    placeholder="church, school, corporate, company picnic"
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Required Tags <span className="font-normal text-gray-400">(comma-separated — items must have these tags in your CSV)</span>
+                    Required Tags <span className="font-normal text-gray-400">(comma-separated)</span>
                   </label>
                   <input
                     value={rule.requiredTags}
@@ -271,7 +387,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Message to Customer <span className="font-normal text-gray-400">(Claude will mention this naturally)</span>
+                    Message to Customer
                   </label>
                   <input
                     value={rule.message}
@@ -300,33 +416,248 @@ export default function AdminPage() {
             />
           </div>
 
-          {/* CSV Upload */}
-          <div className="space-y-2">
-            <h2 className="font-semibold text-gray-800">
-              Inventory CSV <span className="text-gray-400 font-normal text-sm">(optional — skip to update settings only)</span>
-            </h2>
-            <p className="text-xs text-gray-500">
-              Export your inventory as a CSV. We auto-detect columns — no formatting required.
-              Columns: <code className="bg-gray-100 px-1 rounded">name, description, price, category, image_url</code> + optional: <code className="bg-gray-100 px-1 rounded">tags, age_min, age_max, capacity</code>.
-              Use <code className="bg-gray-100 px-1 rounded">tags</code> to add labels like <code className="bg-gray-100 px-1 rounded">tssa</code> for rule filtering.
-              Separate multiple tags with a semicolon, e.g. <code className="bg-gray-100 px-1 rounded">tssa;outdoor</code>.
-            </p>
-            <a
-              href="/inventory-template.csv"
-              download
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              Download CSV template
-            </a>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={e => setFile(e.target.files?.[0] || null)}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer"
-            />
+          {/* Inventory — tabbed */}
+          <div className="space-y-3">
+            <div>
+              <h2 className="font-semibold text-gray-800">
+                Inventory <span className="text-gray-400 font-normal text-sm">(optional — skip to update settings only)</span>
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">Choose how you&apos;d like to add your rental items.</p>
+            </div>
+
+            {/* Tab bar */}
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+              {TABS.map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => { setInventoryTab(tab.id); setParsedItems(null); setParseError('') }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-medium transition-colors ${
+                    inventoryTab === tab.id
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {tab.icon}
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* CSV tab */}
+            {inventoryTab === 'csv' && (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">
+                  Export your inventory as a CSV. Columns: <code className="bg-gray-100 px-1 rounded">name, description, price, category, image_url</code> + optional: <code className="bg-gray-100 px-1 rounded">tags, age_min, age_max, capacity</code>.
+                  Separate multiple tags with a semicolon, e.g. <code className="bg-gray-100 px-1 rounded">tssa;outdoor</code>.
+                </p>
+                <a
+                  href="/inventory-template.csv"
+                  download
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Download CSV template
+                </a>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={e => setFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer"
+                />
+              </div>
+            )}
+
+            {/* AI Text tab */}
+            {inventoryTab === 'text' && (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-500">
+                  Paste a price list, copy text from your website, or just describe your inventory in plain English. Claude will extract the items.
+                </p>
+                <textarea
+                  value={aiText}
+                  onChange={e => { setAiText(e.target.value); setParsedItems(null) }}
+                  placeholder={`Examples:\n• "15x15 Bounce Castle $199, Water Slide $349, Popcorn Machine $75"\n• Paste your website's rental page text\n• "We have 3 bounce houses from $150–$250, a dunk tank for $275, and tables/chairs for rent"`}
+                  rows={6}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-700 placeholder:text-gray-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => parseWithAI('text')}
+                  disabled={!aiText.trim() || parsing}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                >
+                  {parsing ? (
+                    <>
+                      <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                      Parsing...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      Parse with AI
+                    </>
+                  )}
+                </button>
+                {parseError && <p className="text-xs text-red-600">{parseError}</p>}
+                {parsedItems && <ParsedItemsPreview items={parsedItems} onClear={() => setParsedItems(null)} />}
+              </div>
+            )}
+
+            {/* Photo tab */}
+            {inventoryTab === 'photo' && (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-500">
+                  Upload a photo of your price sheet, brochure, or a screenshot of your website. Claude will read it and extract your inventory.
+                </p>
+                {!aiImage ? (
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-gray-200 rounded-xl py-8 flex flex-col items-center gap-2 text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors"
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span className="text-sm font-medium">Click to upload an image</span>
+                    <span className="text-xs">JPG, PNG, or WebP</span>
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="relative rounded-xl overflow-hidden border border-gray-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={aiImage.preview} alt="Uploaded" className="w-full max-h-64 object-contain bg-gray-50" />
+                      <button
+                        type="button"
+                        onClick={() => { setAiImage(null); setParsedItems(null); setParseError(''); if (imageInputRef.current) imageInputRef.current.value = '' }}
+                        className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow text-gray-500 hover:text-red-500 transition-colors"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => parseWithAI('photo')}
+                      disabled={parsing}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                    >
+                      {parsing ? (
+                        <>
+                          <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                          Extracting...
+                        </>
+                      ) : (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                          Extract with AI
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+                <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} className="hidden" />
+                {parseError && <p className="text-xs text-red-600">{parseError}</p>}
+                {parsedItems && <ParsedItemsPreview items={parsedItems} onClear={() => setParsedItems(null)} />}
+              </div>
+            )}
+
+            {/* Manual tab */}
+            {inventoryTab === 'manual' && (
+              <div className="space-y-4">
+                <p className="text-xs text-gray-500">Add items one at a time. Good for small catalogs or fine-tuning after a bulk import.</p>
+                <div className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                      <input
+                        value={manualForm.name}
+                        onChange={e => setManualForm(f => ({ ...f, name: e.target.value }))}
+                        placeholder="Item name (required)"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="number"
+                        min="0"
+                        value={manualForm.price}
+                        onChange={e => setManualForm(f => ({ ...f, price: e.target.value }))}
+                        placeholder="Price ($)"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <select
+                        value={manualForm.category}
+                        onChange={e => setManualForm(f => ({ ...f, category: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {['Inflatables', 'Water', 'Concessions', 'Furniture', 'Tents', 'Games', 'Entertainment', 'Toddler', 'Party Supplies', 'Other'].map(c => (
+                          <option key={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        value={manualForm.description}
+                        onChange={e => setManualForm(f => ({ ...f, description: e.target.value }))}
+                        placeholder="Description (optional)"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        value={manualForm.tags}
+                        onChange={e => setManualForm(f => ({ ...f, tags: e.target.value }))}
+                        placeholder="Tags, semicolon-separated (e.g. tssa;outdoor)"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addManualItem}
+                    disabled={!manualForm.name.trim()}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Item
+                  </button>
+                </div>
+
+                {manualItems.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-500">{manualItems.length} item{manualItems.length !== 1 ? 's' : ''} added</span>
+                      <button type="button" onClick={() => setManualItems([])} className="text-xs text-red-400 hover:text-red-600">Clear all</button>
+                    </div>
+                    {manualItems.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-3 py-2.5">
+                        <div>
+                          <span className="text-sm font-medium text-gray-800">{item.name}</span>
+                          <span className="text-xs text-gray-400 ml-2">{item.category}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-bold text-gray-700">${item.price}</span>
+                          <button type="button" onClick={() => setManualItems(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-300 hover:text-red-400 transition-colors">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Summary badge when items are ready (non-CSV tabs) */}
+            {itemCount !== null && itemCount > 0 && (
+              <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                {itemCount} item{itemCount !== 1 ? 's' : ''} ready to save
+              </div>
+            )}
           </div>
 
           {error && (
@@ -398,6 +729,33 @@ export default function AdminPage() {
         </div>
 
       </div>
+    </div>
+  )
+}
+
+function ParsedItemsPreview({ items, onClear }: { items: ParsedItem[]; onClear: () => void }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-gray-700">
+          {items.length} item{items.length !== 1 ? 's' : ''} found — review before saving
+        </span>
+        <button type="button" onClick={onClear} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+          Clear
+        </button>
+      </div>
+      <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+        {items.map((item, i) => (
+          <div key={i} className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-3 py-2.5">
+            <div className="min-w-0">
+              <span className="text-sm font-medium text-gray-800 truncate block">{item.name}</span>
+              <span className="text-xs text-gray-400">{item.category}{item.tags.length > 0 ? ` · ${item.tags.join(', ')}` : ''}</span>
+            </div>
+            <span className="text-sm font-bold text-gray-700 shrink-0 ml-3">${item.price}</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-gray-400">These items will be saved when you click &quot;Save &amp; Generate Embed Code&quot;.</p>
     </div>
   )
 }
