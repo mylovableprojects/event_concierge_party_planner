@@ -74,7 +74,6 @@ export async function POST(request: Request) {
     return res
   } catch (err) {
     console.error('Signup error:', err)
-    const msg = err instanceof Error ? err.message : String(err)
-    return Response.json({ error: `Signup failed: ${msg}` }, { status: 500 })
+    return Response.json({ error: 'Something went wrong. Please try again.' }, { status: 500 })
   }
 }
