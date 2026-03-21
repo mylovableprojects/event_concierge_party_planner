@@ -19,12 +19,13 @@ export default async function AdminPage() {
 
   let maskedApiKey: string | undefined
   if (config.encryptedApiKey) {
-    try {
-      maskedApiKey = maskApiKey(decrypt(config.encryptedApiKey))
-    } catch {
-      maskedApiKey = undefined
-    }
+    try { maskedApiKey = maskApiKey(decrypt(config.encryptedApiKey)) } catch { /* ignore */ }
   }
 
-  return <AdminForm config={config} maskedApiKey={maskedApiKey} />
+  let maskedResendKey: string | undefined
+  if (config.encryptedResendKey) {
+    try { maskedResendKey = maskApiKey(decrypt(config.encryptedResendKey)) } catch { /* ignore */ }
+  }
+
+  return <AdminForm config={config} maskedApiKey={maskedApiKey} maskedResendKey={maskedResendKey} />
 }

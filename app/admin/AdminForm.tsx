@@ -53,7 +53,7 @@ const DEFAULT_RULES: Rule[] = [
 
 type InventoryTab = 'csv' | 'text' | 'photo' | 'manual'
 
-export default function AdminForm({ config, maskedApiKey }: { config: Config; maskedApiKey?: string }) {
+export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { config: Config; maskedApiKey?: string; maskedResendKey?: string }) {
   const router = useRouter()
   const companyId = config.id
   const [companyName, setCompanyName] = useState(config.name)
@@ -91,6 +91,14 @@ export default function AdminForm({ config, maskedApiKey }: { config: Config; ma
   const [apiKeySaving, setApiKeySaving] = useState(false)
   const [apiKeyError, setApiKeyError] = useState('')
   const [apiKeySuccess, setApiKeySuccess] = useState(false)
+
+  // Resend key section
+  const [newResendKey, setNewResendKey] = useState('')
+  const [resendTesting, setResendTesting] = useState(false)
+  const [resendTestResult, setResendTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [resendSaving, setResendSaving] = useState(false)
+  const [resendError, setResendError] = useState('')
+  const [resendSuccess, setResendSuccess] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<SetupResult | null>(null)
@@ -273,6 +281,48 @@ export default function AdminForm({ config, maskedApiKey }: { config: Config; ma
       setApiKeyError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setApiKeySaving(false)
+    }
+  }
+
+  const testResendKey = async () => {
+    if (!newResendKey.trim()) return
+    setResendTesting(true)
+    setResendTestResult(null)
+    try {
+      const res = await fetch('/api/test-resend-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: newResendKey }),
+      })
+      const data = await res.json()
+      setResendTestResult(data.valid ? { ok: true, msg: 'Key is valid!' } : { ok: false, msg: data.error })
+    } catch {
+      setResendTestResult({ ok: false, msg: 'Could not reach validation endpoint' })
+    } finally {
+      setResendTesting(false)
+    }
+  }
+
+  const saveResendKey = async () => {
+    if (!newResendKey.trim()) return
+    setResendSaving(true)
+    setResendError('')
+    setResendSuccess(false)
+    try {
+      const res = await fetch('/api/update-resend-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: newResendKey }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save')
+      setResendSuccess(true)
+      setNewResendKey('')
+      setResendTestResult(null)
+    } catch (err) {
+      setResendError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setResendSaving(false)
     }
   }
 
@@ -581,6 +631,78 @@ export default function AdminForm({ config, maskedApiKey }: { config: Config; ma
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-40 transition-colors"
             >
               {apiKeySaving ? 'Saving...' : 'Save New Key'}
+            </button>
+          </div>
+
+          {/* Resend Email Key */}
+          <div className="space-y-3">
+            <div>
+              <h2 className="font-semibold text-gray-800">Lead Email Notifications</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Get emailed instantly when a customer submits the lead form. Uses your own Resend account — get a free key at resend.com.
+              </p>
+            </div>
+
+            {maskedResendKey ? (
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 shrink-0">
+                  <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <span className="text-xs font-mono text-gray-600">Resend key: {maskedResendKey}</span>
+                <span className="ml-auto text-xs text-green-600 font-medium">Active</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" className="shrink-0">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span className="text-xs text-amber-700">No Resend key set — leads are saved locally but no email notifications will be sent.</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Resend API Key</label>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={newResendKey}
+                  onChange={e => { setNewResendKey(e.target.value); setResendTestResult(null); setResendSuccess(false) }}
+                  placeholder="re_..."
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={testResendKey}
+                  disabled={!newResendKey.trim() || resendTesting}
+                  className="shrink-0 px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors whitespace-nowrap"
+                >
+                  {resendTesting ? 'Testing...' : 'Test Key'}
+                </button>
+              </div>
+              {resendTestResult && (
+                <p className={`mt-1.5 text-xs font-medium ${resendTestResult.ok ? 'text-green-600' : 'text-red-600'}`}>
+                  {resendTestResult.ok ? '✓ ' : '✗ '}{resendTestResult.msg}
+                </p>
+              )}
+            </div>
+
+            {resendError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">{resendError}</div>
+            )}
+            {resendSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                Resend key saved. You&apos;ll now receive lead emails.
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={saveResendKey}
+              disabled={!newResendKey.trim() || resendSaving}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-40 transition-colors"
+            >
+              {resendSaving ? 'Saving...' : 'Save Resend Key'}
             </button>
           </div>
 

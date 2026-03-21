@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server'
-import { getCompanyConfig } from '@/lib/inventory'
+import { getCompanyConfig, saveLead } from '@/lib/inventory'
+import { decrypt } from '@/lib/encryption'
+import { sendLeadEmail } from '@/lib/resend'
+import { randomUUID } from 'crypto'
 
 interface LeadPayload {
   companyId: string
@@ -28,14 +31,25 @@ export async function POST(request: NextRequest) {
     const itemsSummary = interestedItems.map(i => `${i.name} ($${i.price})`).join(', ')
     const estimatedValue = interestedItems.reduce((sum, i) => sum + i.price, 0)
 
-    // Fire webhook if configured
+    // 1. Always save lead locally
+    saveLead(companyId, {
+      id: randomUUID(),
+      createdAt: new Date().toISOString(),
+      firstName,
+      phone,
+      email,
+      eventDate,
+      eventDescription,
+      interestedItems,
+      estimatedValue,
+    })
+
+    // 2. Fire webhook (if configured)
     if (config.webhookUrl) {
       const webhookPayload = {
-        // GHL-friendly contact fields
         firstName,
         phone,
         email: email || '',
-        // Event context as custom fields
         source: `${config.name} — Event Concierge`,
         eventDate: eventDate || '',
         eventDescription,
@@ -43,16 +57,32 @@ export async function POST(request: NextRequest) {
         estimatedValue,
         companyId,
       }
-
-      const webhookRes = await fetch(config.webhookUrl, {
+      fetch(config.webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(webhookPayload),
-      })
+      }).catch(err => console.error('Webhook delivery failed:', err))
+    }
 
-      if (!webhookRes.ok) {
-        console.error('Webhook delivery failed:', webhookRes.status, await webhookRes.text())
-        // Still return success to the widget — don't block the user
+    // 3. Send email via owner's Resend key (if configured)
+    if (config.encryptedResendKey && config.email) {
+      try {
+        const resendKey = decrypt(config.encryptedResendKey)
+        await sendLeadEmail({
+          apiKey: resendKey,
+          toEmail: config.email,
+          companyName: config.name,
+          firstName,
+          phone,
+          email,
+          eventDate,
+          eventDescription,
+          interestedItems,
+          estimatedValue,
+        })
+      } catch (err) {
+        console.error('Lead email failed:', err)
+        // Don't block — lead is already saved
       }
     }
 

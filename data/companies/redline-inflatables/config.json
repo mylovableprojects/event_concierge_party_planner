@@ -1,0 +1,22 @@
+{
+  "id": "redline-inflatables",
+  "name": "Redline Inflatables",
+  "tagline": "Find the perfect rentals",
+  "primaryColor": "#B03A3A",
+  "accentColor": "#E8A020",
+  "navyColor": "#1E2B3C",
+  "logoText": "RE",
+  "allowedOrigins": [
+    "*"
+  ],
+  "cartMode": "hidden",
+  "cartInquireUrl": "",
+  "webhookUrl": "",
+  "rules": [],
+  "yourName": "Judy Parker",
+  "phone": "2263468190",
+  "email": "judyparkeronline@gmail.com",
+  "passwordHash": "$2b$12$Sw/bllWCpF32NtT0shsG2eyseWl1PyiID0SnwzSNiOn.80Fu1Zj9a",
+  "apiProvider": "anthropic",
+  "encryptedApiKey": "4558be41aa04c3bf5fb422f1:47e76e78c27fe63644f315dfd63c1f2c:a289daa17510ad1bb4210af63c8803d2dbff2ad7f5b8b37673074f7446ee3e3f5d75bc730d7c37f31c1f13bed8e59ac5c11dc316f526a7139c08e6497e617aaf760af7572fb146d60b8b80131c5ad829a78ff5cc708a21e0c77009f3d3aa2205b1910f4f45c7ed0e28b39218"
+}

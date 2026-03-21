@@ -5,10 +5,11 @@ import { signSession, sessionCookieOptions } from '@/lib/auth'
 import { encrypt } from '@/lib/encryption'
 import { validateAnthropicKey } from '@/lib/claude'
 import { validateOpenAIKey } from '@/lib/openai-ai'
+import { validateResendKey } from '@/lib/resend'
 
 export async function POST(request: Request) {
   try {
-    const { companyName, yourName, email, password, phone, apiProvider, apiKey } =
+    const { companyName, yourName, email, password, phone, apiProvider, apiKey, resendKey } =
       await request.json() as Record<string, string>
 
     if (!companyName?.trim() || !yourName?.trim() || !email?.trim() || !password) {
@@ -48,8 +49,19 @@ export async function POST(request: Request) {
       return Response.json({ error: `API key validation failed: ${msg}` }, { status: 422 })
     }
 
+    // Validate Resend key if provided
+    if (resendKey?.trim()) {
+      try {
+        await validateResendKey(resendKey.trim())
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown error'
+        return Response.json({ error: `Resend key validation failed: ${msg}` }, { status: 422 })
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password, 12)
     const encryptedApiKey = encrypt(apiKey.trim())
+    const encryptedResendKey = resendKey?.trim() ? encrypt(resendKey.trim()) : undefined
 
     saveCompanyConfig({
       id: companyId,
@@ -70,6 +82,7 @@ export async function POST(request: Request) {
       passwordHash,
       apiProvider: apiProvider as 'anthropic' | 'openai',
       encryptedApiKey,
+      encryptedResendKey,
     })
     saveInventory(companyId, [])
 

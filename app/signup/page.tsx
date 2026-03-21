@@ -7,16 +7,38 @@ export default function SignupPage() {
   const router = useRouter()
   const [form, setForm] = useState({
     companyName: '', yourName: '', email: '', password: '', phone: '',
-    apiProvider: 'anthropic', apiKey: '',
+    apiProvider: 'anthropic', apiKey: '', resendKey: '',
   })
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [testingResend, setTestingResend] = useState(false)
+  const [resendTestResult, setResendTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(f => ({ ...f, [field]: e.target.value }))
     if (field === 'apiKey' || field === 'apiProvider') setTestResult(null)
+    if (field === 'resendKey') setResendTestResult(null)
+  }
+
+  const testResendKey = async () => {
+    if (!form.resendKey.trim()) return
+    setTestingResend(true)
+    setResendTestResult(null)
+    try {
+      const res = await fetch('/api/test-resend-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: form.resendKey }),
+      })
+      const data = await res.json()
+      setResendTestResult(data.valid ? { ok: true, msg: 'Key is valid!' } : { ok: false, msg: data.error })
+    } catch {
+      setResendTestResult({ ok: false, msg: 'Could not reach validation endpoint' })
+    } finally {
+      setTestingResend(false)
+    }
   }
 
   const testKey = async () => {
@@ -141,6 +163,30 @@ export default function SignupPage() {
                   ? 'Get your key at console.anthropic.com'
                   : 'Get your key at platform.openai.com'}
               </p>
+            </div>
+          </div>
+
+          {/* Resend section */}
+          <div className="border-t border-gray-100 pt-5 space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Resend API Key <span className="text-gray-400 font-normal">(optional — for lead email notifications)</span>
+              </label>
+              <p className="text-xs text-gray-400 mb-2">When a customer fills out the lead form in your widget, we&apos;ll email you the details. Get your key at resend.com.</p>
+              <div className="flex gap-2">
+                <input type="password" value={form.resendKey} onChange={set('resendKey')}
+                  placeholder="re_..."
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#B03A3A]/40 focus:border-[#B03A3A]" />
+                <button type="button" onClick={testResendKey} disabled={!form.resendKey.trim() || testingResend}
+                  className="shrink-0 px-3 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 transition-colors whitespace-nowrap">
+                  {testingResend ? 'Testing...' : 'Test Key'}
+                </button>
+              </div>
+              {resendTestResult && (
+                <p className={`mt-1.5 text-xs font-medium ${resendTestResult.ok ? 'text-green-600' : 'text-red-600'}`}>
+                  {resendTestResult.ok ? '✓ ' : '✗ '}{resendTestResult.msg}
+                </p>
+              )}
             </div>
           </div>
 

@@ -44,6 +44,20 @@ export interface CompanyConfig {
   // API key (AES-256-GCM encrypted — never stored or returned in plaintext)
   apiProvider?: 'anthropic' | 'openai'
   encryptedApiKey?: string
+  // Resend key (AES-256-GCM encrypted)
+  encryptedResendKey?: string
+}
+
+export interface Lead {
+  id: string
+  createdAt: string
+  firstName: string
+  phone: string
+  email?: string
+  eventDate?: string
+  eventDescription: string
+  interestedItems: Array<{ name: string; price: number }>
+  estimatedValue: number
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data', 'companies')
@@ -109,6 +123,26 @@ export function applyRules(
   }
 
   return { activeRules, filteredInventory }
+}
+
+export function saveLead(companyId: string, lead: Lead): void {
+  const dir = path.join(DATA_DIR, companyId)
+  fs.mkdirSync(dir, { recursive: true })
+  const leadsPath = path.join(dir, 'leads.json')
+  const existing: Lead[] = (() => {
+    try { return JSON.parse(fs.readFileSync(leadsPath, 'utf-8')) } catch { return [] }
+  })()
+  existing.unshift(lead)
+  fs.writeFileSync(leadsPath, JSON.stringify(existing, null, 2))
+}
+
+export function getLeads(companyId: string): Lead[] {
+  try {
+    const leadsPath = path.join(DATA_DIR, companyId, 'leads.json')
+    return JSON.parse(fs.readFileSync(leadsPath, 'utf-8'))
+  } catch {
+    return []
+  }
 }
 
 export function listCompanies(): string[] {
