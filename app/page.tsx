@@ -420,8 +420,6 @@ export default function Home() {
           </div>
         </footer>
 
-      </div>
-
       {/* eslint-disable-next-line @next/next/no-sync-scripts */}
       <script src="/embed.js" data-company="demo" />
     </>
