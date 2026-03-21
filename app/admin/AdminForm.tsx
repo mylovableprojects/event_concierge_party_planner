@@ -362,7 +362,7 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
             <p className="text-blue-200 text-xs mt-0.5">We'll configure your widget, load your inventory, and get you live.</p>
           </div>
           <a
-            href="mailto:hello@rentalconciergeai.com"
+            href="mailto:hello@rentalconciergeai.com?subject=Setup%20Help%20Request"
             className="shrink-0 bg-[#E8A020] hover:bg-[#d4911c] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors whitespace-nowrap"
           >
             Email Us
