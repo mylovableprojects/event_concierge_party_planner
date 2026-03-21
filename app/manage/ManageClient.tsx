@@ -7,10 +7,17 @@ interface Props {
   companies: CompanyConfig[]
 }
 
+const emptyForm = { companyName: '', yourName: '', email: '', phone: '', password: '' }
+
 export default function ManageClient({ companies: initial }: Props) {
   const [companies, setCompanies] = useState(initial)
   const [search, setSearch] = useState('')
   const [toggling, setToggling] = useState<string | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
+  const [form, setForm] = useState(emptyForm)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
+  const [createSuccess, setCreateSuccess] = useState('')
 
   const filtered = companies.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -32,19 +39,100 @@ export default function ManageClient({ companies: initial }: Props) {
     setToggling(null)
   }
 
+  async function createAccount(e: React.FormEvent) {
+    e.preventDefault()
+    setCreating(true)
+    setCreateError('')
+    setCreateSuccess('')
+    const res = await fetch('/api/manage/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setCreateSuccess(`Account created: ${data.companyId}`)
+      setForm(emptyForm)
+      setShowCreate(false)
+      // Reload to show new account in list
+      window.location.reload()
+    } else {
+      setCreateError(data.error || 'Something went wrong')
+    }
+    setCreating(false)
+  }
+
   const active = companies.filter(c => c.subscriptionActive).length
   const total = companies.length
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1E2B3C', margin: '0 0 4px' }}>
-          Rental Concierge — Accounts
-        </h1>
-        <p style={{ color: '#666', margin: 0 }}>
-          {active} active · {total - active} inactive · {total} total
-        </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1E2B3C', margin: '0 0 4px' }}>
+            Rental Concierge — Accounts
+          </h1>
+          <p style={{ color: '#666', margin: 0 }}>
+            {active} active · {total - active} inactive · {total} total
+          </p>
+        </div>
+        <button
+          onClick={() => { setShowCreate(!showCreate); setCreateError(''); setCreateSuccess('') }}
+          style={{
+            padding: '10px 18px', background: '#1E2B3C', color: '#fff', border: 'none',
+            borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          {showCreate ? 'Cancel' : '+ Create Free Account'}
+        </button>
       </div>
+
+      {showCreate && (
+        <form onSubmit={createAccount} style={{
+          background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10,
+          padding: 24, marginBottom: 28,
+        }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1E2B3C', margin: '0 0 16px' }}>
+            Create Free Account
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {[
+              { key: 'companyName', label: 'Company Name *', type: 'text' },
+              { key: 'yourName', label: 'Contact Name', type: 'text' },
+              { key: 'email', label: 'Email *', type: 'email' },
+              { key: 'phone', label: 'Phone', type: 'tel' },
+              { key: 'password', label: 'Password * (min 8 chars)', type: 'password' },
+            ].map(({ key, label, type }) => (
+              <div key={key} style={key === 'password' ? { gridColumn: '1 / -1' } : {}}>
+                <label style={{ fontSize: 12, color: '#888', display: 'block', marginBottom: 4 }}>{label}</label>
+                <input
+                  type={type}
+                  value={form[key as keyof typeof form]}
+                  onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}
+                  required={['companyName', 'email', 'password'].includes(key)}
+                  style={{
+                    width: '100%', padding: '8px 12px', fontSize: 14, borderRadius: 6,
+                    border: '1px solid #ddd', boxSizing: 'border-box', outline: 'none',
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+          {createError && <p style={{ color: '#dc2626', fontSize: 13, margin: '12px 0 0' }}>{createError}</p>}
+          {createSuccess && <p style={{ color: '#16a34a', fontSize: 13, margin: '12px 0 0' }}>{createSuccess}</p>}
+          <button
+            type="submit"
+            disabled={creating}
+            style={{
+              marginTop: 16, padding: '10px 24px', background: '#B03A3A', color: '#fff',
+              border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              opacity: creating ? 0.7 : 1,
+            }}
+          >
+            {creating ? 'Creating…' : 'Create Account (Free Access)'}
+          </button>
+        </form>
+      )}
 
       <input
         type="text"
