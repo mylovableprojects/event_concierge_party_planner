@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { kv } from '@vercel/kv'
+import Redis from 'ioredis'
 
 export interface InventoryItem {
   id: string
@@ -66,9 +66,33 @@ export interface Lead {
 
 const DATA_DIR = path.join(process.cwd(), 'data', 'companies')
 
-/** Use KV when env vars are present (Vercel production), otherwise fall back to filesystem (local dev) */
-function hasKV(): boolean {
-  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+/** Use Redis when REDIS_URL is present (Vercel production), otherwise fall back to filesystem (local dev) */
+function hasRedis(): boolean {
+  return !!process.env.REDIS_URL
+}
+
+let _redis: Redis | null = null
+function getRedis(): Redis {
+  if (!_redis) _redis = new Redis(process.env.REDIS_URL!)
+  return _redis
+}
+
+async function rget<T>(key: string): Promise<T | null> {
+  const val = await getRedis().get(key)
+  if (!val) return null
+  try { return JSON.parse(val) as T } catch { return null }
+}
+
+async function rset(key: string, value: unknown): Promise<void> {
+  await getRedis().set(key, JSON.stringify(value))
+}
+
+async function rsadd(key: string, member: string): Promise<void> {
+  await getRedis().sadd(key, member)
+}
+
+async function rsmembers(key: string): Promise<string[]> {
+  return getRedis().smembers(key)
 }
 
 function readFile<T>(filePath: string): T | null {
@@ -88,27 +112,26 @@ function writeFile(filePath: string, data: unknown): void {
 // ── Company Config ───────────────────────────────────────────────────────────
 
 export async function getCompanyConfig(companyId: string): Promise<CompanyConfig | null> {
-  if (hasKV()) {
-    const fromKV = await kv.get<CompanyConfig>(`company:${companyId}:config`)
-    if (fromKV) return fromKV
+  if (hasRedis()) {
+    const fromRedis = await rget<CompanyConfig>(`company:${companyId}:config`)
+    if (fromRedis) return fromRedis
   }
-  // Fall back to filesystem for pre-committed data (demo, existing accounts)
   return readFile<CompanyConfig>(path.join(DATA_DIR, companyId, 'config.json'))
 }
 
 export async function saveCompanyConfig(config: CompanyConfig): Promise<void> {
-  if (hasKV()) {
-    await kv.set(`company:${config.id}:config`, config)
-    await kv.sadd('companies:all', config.id)
+  if (hasRedis()) {
+    await rset(`company:${config.id}:config`, config)
+    await rsadd('companies:all', config.id)
   } else {
     writeFile(path.join(DATA_DIR, config.id, 'config.json'), config)
   }
 }
 
 export async function getAllCompanyConfigs(): Promise<CompanyConfig[]> {
-  if (hasKV()) {
-    const ids = await kv.smembers('companies:all')
-    const configs = await Promise.all(ids.map(id => getCompanyConfig(String(id))))
+  if (hasRedis()) {
+    const ids = await rsmembers('companies:all')
+    const configs = await Promise.all(ids.map(id => getCompanyConfig(id)))
     return configs.filter((c): c is CompanyConfig => c !== null)
   }
   try {
@@ -124,24 +147,14 @@ export async function getAllCompanyConfigs(): Promise<CompanyConfig[]> {
 
 export async function findCompanyByEmail(email: string): Promise<CompanyConfig | null> {
   const lower = email.toLowerCase()
-  if (hasKV()) {
-    // Check KV index first
-    const ids = await kv.smembers('companies:all')
+  if (hasRedis()) {
+    const ids = await rsmembers('companies:all')
     for (const id of ids) {
-      const config = await getCompanyConfig(String(id))
+      const config = await getCompanyConfig(id)
       if (config?.email?.toLowerCase() === lower) return config
     }
-    // Fall back to filesystem for pre-existing accounts not yet in KV
-    try {
-      const dirs = fs.readdirSync(DATA_DIR)
-      for (const id of dirs) {
-        const config = readFile<CompanyConfig>(path.join(DATA_DIR, id, 'config.json'))
-        if (config?.email?.toLowerCase() === lower) return config
-      }
-    } catch { /* ignore */ }
-    return null
   }
-  // Local dev: scan filesystem
+  // Always fall back to filesystem (covers pre-existing accounts)
   try {
     const dirs = fs.readdirSync(DATA_DIR)
     for (const id of dirs) {
@@ -155,16 +168,16 @@ export async function findCompanyByEmail(email: string): Promise<CompanyConfig |
 // ── Inventory ────────────────────────────────────────────────────────────────
 
 export async function getInventory(companyId: string): Promise<InventoryItem[]> {
-  if (hasKV()) {
-    const fromKV = await kv.get<InventoryItem[]>(`company:${companyId}:inventory`)
-    if (fromKV) return fromKV
+  if (hasRedis()) {
+    const fromRedis = await rget<InventoryItem[]>(`company:${companyId}:inventory`)
+    if (fromRedis) return fromRedis
   }
   return readFile<InventoryItem[]>(path.join(DATA_DIR, companyId, 'inventory.json')) ?? []
 }
 
 export async function saveInventory(companyId: string, items: InventoryItem[]): Promise<void> {
-  if (hasKV()) {
-    await kv.set(`company:${companyId}:inventory`, items)
+  if (hasRedis()) {
+    await rset(`company:${companyId}:inventory`, items)
   } else {
     writeFile(path.join(DATA_DIR, companyId, 'inventory.json'), items)
   }
@@ -173,9 +186,9 @@ export async function saveInventory(companyId: string, items: InventoryItem[]): 
 // ── Leads ────────────────────────────────────────────────────────────────────
 
 export async function saveLead(companyId: string, lead: Lead): Promise<void> {
-  if (hasKV()) {
-    const existing = await kv.get<Lead[]>(`company:${companyId}:leads`) ?? []
-    await kv.set(`company:${companyId}:leads`, [lead, ...existing])
+  if (hasRedis()) {
+    const existing = await rget<Lead[]>(`company:${companyId}:leads`) ?? []
+    await rset(`company:${companyId}:leads`, [lead, ...existing])
   } else {
     const leadsPath = path.join(DATA_DIR, companyId, 'leads.json')
     const existing: Lead[] = readFile<Lead[]>(leadsPath) ?? []
@@ -184,8 +197,8 @@ export async function saveLead(companyId: string, lead: Lead): Promise<void> {
 }
 
 export async function getLeads(companyId: string): Promise<Lead[]> {
-  if (hasKV()) {
-    return await kv.get<Lead[]>(`company:${companyId}:leads`) ?? []
+  if (hasRedis()) {
+    return await rget<Lead[]>(`company:${companyId}:leads`) ?? []
   }
   return readFile<Lead[]>(path.join(DATA_DIR, companyId, 'leads.json')) ?? []
 }
