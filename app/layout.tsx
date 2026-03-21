@@ -22,11 +22,13 @@ export const metadata: Metadata = {
     url: 'https://concierge.thepartyrentaltoolkit.com',
     siteName: 'Event Concierge',
     type: 'website',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Event Concierge' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: "Event Concierge — AI Chat Widget for Party Rental Companies",
     description: "Customers describe their event, your AI recommends the perfect rentals. Live in under 10 minutes. $297/year.",
+    images: ['/opengraph-image'],
   },
 };
 

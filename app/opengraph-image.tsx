@@ -1,11 +1,10 @@
 import { ImageResponse } from 'next/og'
 
-export const runtime = 'edge'
-export const alt = 'Event Concierge — AI-powered chat widget for party rental companies'
+export const alt = 'Event Concierge — AI Chat Widget for Party Rental Companies'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-export default function Image() {
+export default async function Image() {
   return new ImageResponse(
     (
       <div
@@ -22,7 +21,7 @@ export default function Image() {
           overflow: 'hidden',
         }}
       >
-        {/* Background accent blobs */}
+        {/* Background blobs */}
         <div style={{
           position: 'absolute', top: -120, right: -120,
           width: 500, height: 500, borderRadius: '50%',
@@ -34,18 +33,15 @@ export default function Image() {
           background: 'radial-gradient(circle, rgba(232,160,32,0.15) 0%, transparent 70%)',
         }} />
 
-        {/* Dot grid overlay */}
+        {/* Dot grid */}
         <div style={{
           position: 'absolute', inset: 0,
           backgroundImage: 'radial-gradient(circle, rgba(30,43,60,0.1) 1px, transparent 1px)',
           backgroundSize: '28px 28px',
         }} />
 
-        {/* Logo */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 14,
-          marginBottom: 32,
-        }}>
+        {/* Logo row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
           <div style={{
             width: 52, height: 52, borderRadius: 14,
             background: '#1E2B3C',
@@ -55,17 +51,16 @@ export default function Image() {
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
           </div>
-          <span style={{ fontSize: 26, fontWeight: 600, color: '#1E2B3C', letterSpacing: '-0.5px', fontFamily: 'Georgia, serif' }}>
+          <span style={{ fontSize: 28, fontWeight: 600, color: '#1E2B3C', letterSpacing: '-0.5px' }}>
             Event Concierge
           </span>
         </div>
 
         {/* Headline */}
         <div style={{
-          fontSize: 72, fontWeight: 800, color: '#1E2B3C',
-          lineHeight: 1.05, textAlign: 'center',
-          maxWidth: 900, letterSpacing: '-2px',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
+          fontSize: 72, fontWeight: 800, color: '#1E2B3C',
+          lineHeight: 1.05, textAlign: 'center', letterSpacing: '-2px',
         }}>
           <span>Recommend the</span>
           <span style={{ color: '#B03A3A' }}>right rentals.</span>
@@ -78,10 +73,10 @@ export default function Image() {
           maxWidth: 700, marginTop: 24, lineHeight: 1.5,
           fontFamily: 'system-ui, sans-serif', fontWeight: 400,
         }}>
-          AI chat widget for party rental companies. Embed in 60 seconds.
+          AI chat widget for party rental companies. Embed in 60 seconds. $297/year.
         </div>
 
-        {/* Pill badges */}
+        {/* Badges */}
         <div style={{ display: 'flex', gap: 12, marginTop: 36 }}>
           {['Add to Cart', 'Inquire Button', 'Quote List', 'Browse Only'].map(label => (
             <div key={label} style={{
@@ -96,7 +91,7 @@ export default function Image() {
           ))}
         </div>
 
-        {/* Bottom bar */}
+        {/* Bottom gradient bar */}
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
           height: 6, background: 'linear-gradient(90deg, #B03A3A, #E8A020, #1E2B3C)',
