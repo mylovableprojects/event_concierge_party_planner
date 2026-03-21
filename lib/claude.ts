@@ -1,10 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { InventoryItem, Rule } from './inventory'
 
-function getClient() {
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-}
-
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
@@ -17,7 +13,7 @@ export interface RecommendationResponse {
   followUpQuestion: string | null
 }
 
-function buildSystemPrompt(inventory: InventoryItem[], companyName: string, activeRules: Rule[] = []): string {
+export function buildSystemPrompt(inventory: InventoryItem[], companyName: string, activeRules: Rule[] = []): string {
   const catalog = inventory.map(item =>
     `- ID: ${item.id} | ${item.name} | $${item.price} | Category: ${item.category} | Ages: ${item.ageMin}–${item.ageMax} | Capacity: up to ${item.guestCapacity} guests | Tags: ${item.tags.join(', ')}\n  Description: ${item.description}`
   ).join('\n\n')
@@ -63,9 +59,12 @@ export async function getRecommendations(
   messages: ChatMessage[],
   inventory: InventoryItem[],
   companyName: string,
+  apiKey: string,
   activeRules: Rule[] = []
 ): Promise<RecommendationResponse> {
-  const response = await getClient().messages.create({
+  const client = new Anthropic({ apiKey })
+
+  const response = await client.messages.create({
     model: 'claude-opus-4-6',
     max_tokens: 1024,
     system: buildSystemPrompt(inventory, companyName, activeRules),
@@ -74,7 +73,6 @@ export async function getRecommendations(
 
   const raw = response.content[0].type === 'text' ? response.content[0].text : ''
 
-  // Extract the JSON object regardless of surrounding markdown/text
   const jsonMatch = raw.match(/\{[\s\S]*\}/)
   if (jsonMatch) {
     try {
@@ -82,11 +80,20 @@ export async function getRecommendations(
     } catch { /* fall through */ }
   }
 
-  // Final fallback
   return {
     message: raw.replace(/```[\s\S]*?```/g, '').trim(),
     recommendations: [],
     upsells: [],
     followUpQuestion: null,
   }
+}
+
+/** Validate an Anthropic key with a minimal 1-token call. */
+export async function validateAnthropicKey(apiKey: string): Promise<void> {
+  const client = new Anthropic({ apiKey })
+  await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1,
+    messages: [{ role: 'user', content: 'hi' }],
+  })
 }
