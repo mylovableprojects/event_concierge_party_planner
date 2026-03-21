@@ -13,8 +13,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Event Concierge",
-  description: "AI-powered party rental recommendations",
+  title: "Event Concierge — AI Chat Widget for Party Rental Companies",
+  description: "Embed an AI chat widget on your website. Customers describe their event and get instant, personalized rental recommendations. $297/year.",
+  metadataBase: new URL('https://concierge.thepartyrentaltoolkit.com'),
+  openGraph: {
+    title: "Event Concierge — AI Chat Widget for Party Rental Companies",
+    description: "Customers describe their event, your AI recommends the perfect rentals. Live in under 10 minutes. $297/year.",
+    url: 'https://concierge.thepartyrentaltoolkit.com',
+    siteName: 'Event Concierge',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Event Concierge — AI Chat Widget for Party Rental Companies",
+    description: "Customers describe their event, your AI recommends the perfect rentals. Live in under 10 minutes. $297/year.",
+  },
 };
 
 export default function RootLayout({
