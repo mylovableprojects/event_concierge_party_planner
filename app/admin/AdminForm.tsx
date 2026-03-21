@@ -352,6 +352,37 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey }: { c
           </button>
         </div>
 
+        {/* Setup checklist banner — shown until API key is added */}
+        {!maskedApiKey && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" className="shrink-0">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span className="font-semibold text-amber-800 text-sm">Finish setting up your widget</span>
+            </div>
+            <div className="space-y-2">
+              {[
+                { done: true,  label: 'Account created' },
+                { done: false, label: 'Add your AI API key', anchor: 'api-key', note: 'Required — powers the chat recommendations' },
+                { done: false, label: 'Upload your inventory', anchor: 'inventory', note: 'So the AI knows what you offer' },
+                { done: false, label: 'Add Resend key for lead emails', anchor: 'resend', note: 'Optional but recommended' },
+                { done: false, label: 'Copy and paste your embed code', note: 'After saving settings below' },
+              ].map((step, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${step.done ? 'bg-green-500 border-green-500' : 'border-amber-400'}`}>
+                    {step.done && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
+                  </div>
+                  <div>
+                    <span className={`text-sm ${step.done ? 'text-gray-400 line-through' : 'text-amber-900 font-medium'}`}>{step.label}</span>
+                    {step.note && !step.done && <span className="text-xs text-amber-700 ml-1.5">— {step.note}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-8">
 
           {/* Company Info */}

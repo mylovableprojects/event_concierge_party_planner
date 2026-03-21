@@ -2,24 +2,14 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { getCompanyConfig, saveCompanyConfig, saveInventory, findCompanyByEmail } from '@/lib/inventory'
 import { signSession, sessionCookieOptions } from '@/lib/auth'
-import { encrypt } from '@/lib/encryption'
-import { validateAnthropicKey } from '@/lib/claude'
-import { validateOpenAIKey } from '@/lib/openai-ai'
-import { validateResendKey } from '@/lib/resend'
 
 export async function POST(request: Request) {
   try {
-    const { companyName, yourName, email, password, phone, apiProvider, apiKey, resendKey } =
+    const { companyName, yourName, email, password, phone } =
       await request.json() as Record<string, string>
 
     if (!companyName?.trim() || !yourName?.trim() || !email?.trim() || !password) {
       return Response.json({ error: 'All fields are required.' }, { status: 400 })
-    }
-    if (!apiProvider || !apiKey?.trim()) {
-      return Response.json({ error: 'An API key and provider are required.' }, { status: 400 })
-    }
-    if (apiProvider !== 'anthropic' && apiProvider !== 'openai') {
-      return Response.json({ error: 'Invalid API provider.' }, { status: 400 })
     }
     if (password.length < 8) {
       return Response.json({ error: 'Password must be at least 8 characters.' }, { status: 400 })
@@ -40,28 +30,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'An account with that email already exists.' }, { status: 409 })
     }
 
-    // Validate API key before saving anything
-    try {
-      if (apiProvider === 'anthropic') await validateAnthropicKey(apiKey.trim())
-      else await validateOpenAIKey(apiKey.trim())
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
-      return Response.json({ error: `API key validation failed: ${msg}` }, { status: 422 })
-    }
-
-    // Validate Resend key if provided
-    if (resendKey?.trim()) {
-      try {
-        await validateResendKey(resendKey.trim())
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Unknown error'
-        return Response.json({ error: `Resend key validation failed: ${msg}` }, { status: 422 })
-      }
-    }
-
     const passwordHash = await bcrypt.hash(password, 12)
-    const encryptedApiKey = encrypt(apiKey.trim())
-    const encryptedResendKey = resendKey?.trim() ? encrypt(resendKey.trim()) : undefined
 
     saveCompanyConfig({
       id: companyId,
@@ -80,9 +49,6 @@ export async function POST(request: Request) {
       phone: phone?.trim() || '',
       email: email.trim().toLowerCase(),
       passwordHash,
-      apiProvider: apiProvider as 'anthropic' | 'openai',
-      encryptedApiKey,
-      encryptedResendKey,
     })
     saveInventory(companyId, [])
 
