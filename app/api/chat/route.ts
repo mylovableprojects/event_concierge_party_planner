@@ -20,19 +20,24 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    if (!config.encryptedApiKey || !config.apiProvider) {
+    let apiKey: string
+    const provider = config.apiProvider || 'anthropic'
+
+    if (config.encryptedApiKey) {
+      try {
+        apiKey = decrypt(config.encryptedApiKey)
+      } catch {
+        return Response.json(
+          { error: 'API key could not be decrypted. Please update your API key in the admin panel.' },
+          { status: 400 }
+        )
+      }
+    } else if (process.env.ANTHROPIC_API_KEY) {
+      // Fall back to env key for the demo company
+      apiKey = process.env.ANTHROPIC_API_KEY
+    } else {
       return Response.json(
         { error: 'No API key configured. Please update your API key in the admin panel.' },
-        { status: 400 }
-      )
-    }
-
-    let apiKey: string
-    try {
-      apiKey = decrypt(config.encryptedApiKey)
-    } catch {
-      return Response.json(
-        { error: 'API key could not be decrypted. Please update your API key in the admin panel.' },
         { status: 400 }
       )
     }
@@ -45,7 +50,7 @@ export async function POST(request: NextRequest) {
     const conversationText = messages.map(m => m.content).join(' ')
     const { activeRules, filteredInventory } = applyRules(inventory, config.rules || [], conversationText)
 
-    const result = config.apiProvider === 'openai'
+    const result = provider === 'openai'
       ? await getRecommendationsOpenAI(messages, filteredInventory, config.name, apiKey, activeRules)
       : await getRecommendations(messages, filteredInventory, config.name, apiKey, activeRules)
 
