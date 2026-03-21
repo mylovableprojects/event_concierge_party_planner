@@ -1,3 +1,5 @@
+import CopyButton from './CopyButton'
+
 export default async function SignupSuccessPage({
   searchParams,
 }: {
@@ -47,15 +49,7 @@ export default async function SignupSuccessPage({
           </p>
           <div className="bg-gray-950 rounded-xl px-4 py-3 flex items-start gap-3">
             <code className="text-green-400 text-xs flex-1 break-all leading-relaxed">{embedCode}</code>
-            <button
-              id="copy-btn"
-              className="text-gray-400 hover:text-white shrink-0 transition-colors mt-0.5"
-              title="Copy"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-              </svg>
-            </button>
+            <CopyButton text={embedCode} />
           </div>
           <p className="text-xs text-gray-400">Company ID: <code className="bg-gray-100 px-1 rounded font-mono">{companyId}</code></p>
         </div>
@@ -126,15 +120,7 @@ export default async function SignupSuccessPage({
 
       </div>
 
-      {/* Copy-to-clipboard script */}
-      <script dangerouslySetInnerHTML={{ __html: `
-        document.getElementById('copy-btn')?.addEventListener('click', function() {
-          navigator.clipboard.writeText(${JSON.stringify(embedCode)}).then(() => {
-            this.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>';
-            setTimeout(() => { this.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x=\\"9\\" y=\\"9\\" width=\\"13\\" height=\\"13\\" rx=\\"2\\"/><path d=\\"M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1\\"/></svg>'; }, 2000);
-          });
-        });
-      `}} />
+
     </div>
   )
 }
