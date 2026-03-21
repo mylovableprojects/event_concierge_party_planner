@@ -1,0 +1,49 @@
+[
+  {
+    "id": "jurassic-jump-dino-edition",
+    "name": "Jurassic Jump, Dino Edition",
+    "description": "Great for kids, teens, and adults — dino-themed fun!",
+    "price": 249,
+    "category": "Bounce Houses",
+    "tags": [
+      "bouncer",
+      "dino",
+      "outdoor"
+    ],
+    "ageMin": 3,
+    "ageMax": 99,
+    "guestCapacity": 20,
+    "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300"
+  },
+  {
+    "id": "tropical-water-slide",
+    "name": "Tropical Water Slide",
+    "description": "Beat the heat with our 18-ft waterslide — perfect for summer parties",
+    "price": 299,
+    "category": "Water Slides",
+    "tags": [
+      "water",
+      "summer",
+      "slide"
+    ],
+    "ageMin": 5,
+    "ageMax": 99,
+    "guestCapacity": 15,
+    "image": "https://images.unsplash.com/photo-1548247416-ec66f4900b2e?w=300"
+  },
+  {
+    "id": "cotton-candy-machine",
+    "name": "Cotton Candy Machine",
+    "description": "Fresh-spun cotton candy — 3 colors included",
+    "price": 110,
+    "category": "Concessions",
+    "tags": [
+      "food",
+      "concession"
+    ],
+    "ageMin": 1,
+    "ageMax": 99,
+    "guestCapacity": 100,
+    "image": "https://images.unsplash.com/photo-1562967914-608f82629710?w=300"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "id": "test-rental",
+  "name": "Test Rental Co",
+  "tagline": "Find the perfect rentals",
+  "primaryColor": "#2563EB",
+  "accentColor": "#F59E0B",
+  "navyColor": "#1E3A5F",
+  "logoText": "TE",
+  "allowedOrigins": [
+    "*"
+  ]
+}
