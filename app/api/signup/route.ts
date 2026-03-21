@@ -52,6 +52,22 @@ export async function POST(request: Request) {
     })
     saveInventory(companyId, [])
 
+    // Fire HighLevel webhook (non-blocking)
+    fetch('https://services.leadconnectorhq.com/hooks/1jQA3wVVe39Qvmd8gF84/webhook-trigger/74b18f8c-5da8-428b-8f3b-5beddb12e990', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'event_concierge',
+        firstName: yourName.trim().split(' ')[0],
+        lastName: yourName.trim().split(' ').slice(1).join(' ') || '',
+        name: yourName.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone?.trim() || '',
+        companyName: companyName.trim(),
+        companyId,
+      }),
+    }).catch(err => console.error('HighLevel webhook error:', err))
+
     const token = signSession(companyId, email.trim().toLowerCase())
     const res = NextResponse.json({ success: true, companyId })
     res.cookies.set(sessionCookieOptions(token))
