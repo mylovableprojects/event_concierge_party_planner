@@ -44,6 +44,13 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
+      <Script src="https://www.googletagmanager.com/gtag/js?id=G-EMKR0SCCKR" strategy="afterInteractive" />
+      <Script id="gtag" strategy="afterInteractive">{`
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-EMKR0SCCKR');
+      `}</Script>
       <Script id="clarity" strategy="afterInteractive">{`
         (function(c,l,a,r,i,t,y){
           c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
