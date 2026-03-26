@@ -60,6 +60,8 @@ const QUICK_PROMPTS = [
 function WidgetContent() {
   const searchParams = useSearchParams()
   const companyId = searchParams.get('company') || 'demo'
+  const apiBase = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '')
+  const apiUrl = (p: string) => (apiBase ? `${apiBase}${p}` : p)
 
   const [config, setConfig] = useState<CompanyConfig | null>(null)
   const [inventory, setInventory] = useState<InventoryItem[]>([])
@@ -74,14 +76,14 @@ function WidgetContent() {
 
   // Load company config + inventory
   useEffect(() => {
-    fetch(`/api/company?id=${companyId}`)
+    fetch(apiUrl(`/api/company?id=${encodeURIComponent(companyId)}`))
       .then(r => r.json())
       .then(data => {
         if (data.config) setConfig(data.config)
         if (data.inventory) setInventory(data.inventory)
       })
       .catch(console.error)
-  }, [companyId])
+  }, [companyId, apiBase])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -101,7 +103,7 @@ function WidgetContent() {
     setLoading(true)
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch(apiUrl('/api/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: newChatHistory, companyId }),

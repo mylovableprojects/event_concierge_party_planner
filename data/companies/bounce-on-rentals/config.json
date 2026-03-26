@@ -1,0 +1,23 @@
+{
+  "id": "bounce-on-rentals",
+  "name": "Bounce on Rentals",
+  "tagline": "Find the perfect rentals",
+  "primaryColor": "#B03A3A",
+  "accentColor": "#E8A020",
+  "navyColor": "#1E2B3C",
+  "logoText": "BO",
+  "allowedOrigins": [
+    "*"
+  ],
+  "cartMode": "hidden",
+  "cartInquireUrl": "",
+  "webhookUrl": "",
+  "rules": [],
+  "yourName": "Shaun",
+  "phone": "5199458885",
+  "email": "ajudyparker2027@gmail.com",
+  "passwordHash": "$2b$12$kCVgXpE0rIoHasjDqEZV3OwOh3iTovpFHE9XbdnJEY49ZXyuVBFyO",
+  "subscriptionActive": true,
+  "encryptedInflatableOfficeApiKey": "f0cc882623c250992e98067b:ee4b7c3b74f3adb10e4a8d68fc80f2cb:d3afe3b0417d26909f2d88c62f5e7e34e1b151b87f06dfd917a4533c644322dc",
+  "inflatableOfficeLastSyncedAt": "2026-03-26T12:41:47.557Z"
+}

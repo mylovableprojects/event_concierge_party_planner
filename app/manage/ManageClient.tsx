@@ -175,7 +175,7 @@ export default function ManageClient({ companies: initial }: Props) {
             <th style={{ padding: '8px 12px', color: '#888', fontWeight: 600 }}>Company</th>
             <th style={{ padding: '8px 12px', color: '#888', fontWeight: 600 }}>Email</th>
             <th style={{ padding: '8px 12px', color: '#888', fontWeight: 600 }}>Phone</th>
-            <th style={{ padding: '8px 12px', color: '#888', fontWeight: 600 }}>Provider</th>
+            <th style={{ padding: '8px 12px', color: '#888', fontWeight: 600 }}>AI</th>
             <th style={{ padding: '8px 12px', color: '#888', fontWeight: 600 }}>Status</th>
             <th style={{ padding: '8px 12px', color: '#888', fontWeight: 600 }}>Access</th>
           </tr>
@@ -189,7 +189,7 @@ export default function ManageClient({ companies: initial }: Props) {
               </td>
               <td style={{ padding: '12px 12px', color: '#444' }}>{c.email || '—'}</td>
               <td style={{ padding: '12px 12px', color: '#444' }}>{c.phone || '—'}</td>
-              <td style={{ padding: '12px 12px', color: '#444' }}>{c.apiProvider || 'anthropic'}</td>
+              <td style={{ padding: '12px 12px', color: '#444' }}>Anthropic</td>
               <td style={{ padding: '12px 12px' }}>
                 <span style={{
                   display: 'inline-block', padding: '2px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600,

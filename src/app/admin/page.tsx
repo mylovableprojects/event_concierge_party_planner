@@ -5,10 +5,9 @@ import { getCompanyConfig, getInventory, getLeads } from '@/lib/inventory'
 import { getAdminIoDashboard } from '@/lib/adminDashboard'
 import AdminDashboard from '@/src/components/admin/AdminDashboard'
 
-export default async function AdminPage() {
+export default async function AdminDashboardPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get(COOKIE_NAME)?.value
-
   if (!token) redirect('/login')
 
   const session = verifySession(token)
@@ -32,17 +31,16 @@ export default async function AdminPage() {
   }).length
 
   return (
-    <div className="space-y-10">
-      <AdminDashboard
-        companyId={session.companyId}
-        config={config}
-        inventoryCount={inventory.length}
-        ioStatus={io.ioStatus}
-        ioInventoryCount={io.ioInventoryCount}
-        ioCategoriesCount={io.ioCategoriesCount}
-        recentLeads30dCount={recentLeads30dCount}
-        recentLeads={leads.slice(0, 5)}
-      />
-    </div>
+    <AdminDashboard
+      companyId={session.companyId}
+      config={config}
+      inventoryCount={inventory.length}
+      ioStatus={io.ioStatus}
+      ioInventoryCount={io.ioInventoryCount}
+      ioCategoriesCount={io.ioCategoriesCount}
+      recentLeads30dCount={recentLeads30dCount}
+      recentLeads={leads.slice(0, 5)}
+    />
   )
 }
+

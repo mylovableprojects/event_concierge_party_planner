@@ -14,6 +14,13 @@ export interface InventoryItem {
   guestCapacity: number
   image: string
   url?: string
+  // Optional fields used by integrations (e.g., InflatableOffice sync)
+  imageFull?: string
+  images?: string[]
+  prices?: Record<string, number>
+  bookingUrl?: string | null
+  source?: string
+  sourceId?: string | number
 }
 
 export type CartMode = 'enabled' | 'inquire' | 'hidden' | 'quote'
@@ -46,6 +53,8 @@ export interface CompanyConfig {
   apiProvider?: 'anthropic' | 'openai'
   encryptedApiKey?: string
   encryptedResendKey?: string
+  encryptedInflatableOfficeApiKey?: string
+  inflatableOfficeLastSyncedAt?: string
   stripeCustomerId?: string
   stripeSubscriptionId?: string
   subscriptionActive?: boolean
@@ -84,8 +93,13 @@ async function rget<T>(key: string): Promise<T | null> {
   try { return JSON.parse(val) as T } catch { return null }
 }
 
-async function rset(key: string, value: unknown): Promise<void> {
-  await getRedis().set(key, JSON.stringify(value))
+async function rset(key: string, value: unknown): Promise<string | null> {
+  const result = await getRedis().set(key, JSON.stringify(value))
+  // Debug-only: log key + redis return value (never log secret values)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[redis] SET', key, '=>', result)
+  }
+  return result
 }
 
 async function rsadd(key: string, member: string): Promise<void> {

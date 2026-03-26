@@ -42,3 +42,10 @@ export function maskApiKey(key: string): string {
   if (key.length <= 4) return '****'
   return `sk-...${key.slice(-4)}`
 }
+
+/** Returns "abcd...wxyz" style masked display string for arbitrary secrets. */
+export function maskSecret(key: string): string {
+  const trimmed = key.trim()
+  if (trimmed.length <= 8) return '****'
+  return `${trimmed.slice(0, 4)}...${trimmed.slice(-4)}`
+}

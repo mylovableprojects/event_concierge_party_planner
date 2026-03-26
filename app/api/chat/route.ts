@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
 import { getRecommendations, ChatMessage } from '@/lib/claude'
-import { getRecommendationsOpenAI } from '@/lib/openai-ai'
 import { getInventory, getCompanyConfig, applyRules } from '@/lib/inventory'
 import { decrypt } from '@/lib/encryption'
 
@@ -21,8 +20,6 @@ export async function POST(request: NextRequest) {
     }
 
     let apiKey: string
-    const provider = config.apiProvider || 'anthropic'
-
     if (config.encryptedApiKey) {
       try {
         apiKey = decrypt(config.encryptedApiKey)
@@ -51,9 +48,7 @@ export async function POST(request: NextRequest) {
     const userText = messages.filter(m => m.role === 'user').map(m => m.content).join(' ')
     const { activeRules, filteredInventory } = applyRules(inventory, config.rules || [], conversationText, userText)
 
-    const result = provider === 'openai'
-      ? await getRecommendationsOpenAI(messages, filteredInventory, config.name, apiKey, activeRules, config.customInstructions)
-      : await getRecommendations(messages, filteredInventory, config.name, apiKey, activeRules, config.customInstructions)
+    const result = await getRecommendations(messages, filteredInventory, config.name, apiKey, activeRules, config.customInstructions)
 
     return Response.json(result)
   } catch (err) {

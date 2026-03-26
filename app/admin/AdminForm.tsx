@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface Rule {
@@ -54,7 +54,128 @@ const DEFAULT_RULES: Rule[] = [
 
 type InventoryTab = 'csv' | 'text' | 'photo' | 'manual'
 
-export default function AdminForm({ config, maskedApiKey, maskedResendKey, inventoryCount }: { config: Config; maskedApiKey?: string; maskedResendKey?: string; inventoryCount?: number }) {
+type AdminSectionId =
+  | 'company'
+  | 'brandColors'
+  | 'cartMode'
+  | 'inventoryRules'
+  | 'ghlWebhook'
+  | 'customAiInstructions'
+  | 'aiApiKey'
+  | 'leadEmailNotifications'
+  | 'integrations'
+  | 'inventory'
+  | 'leads'
+
+export type { AdminSectionId }
+
+const ADMIN_SECTIONS_STORAGE_KEY = 'adminDashboardSections.v1'
+
+const DEFAULT_SECTION_OPEN: Record<AdminSectionId, boolean> = {
+  integrations: true,
+  company: false,
+  brandColors: false,
+  cartMode: false,
+  inventoryRules: false,
+  ghlWebhook: false,
+  customAiInstructions: false,
+  aiApiKey: false,
+  leadEmailNotifications: false,
+  inventory: false,
+  leads: false,
+}
+
+function AccordionSection(
+  {
+    sectionId,
+    title,
+    open,
+    onToggle,
+    headerRight,
+    children,
+  }: {
+    sectionId: AdminSectionId
+    title: string
+    open: boolean
+    onToggle: () => void
+    headerRight?: React.ReactNode
+    children: React.ReactNode
+  }
+) {
+  const contentId = `section-${sectionId}`
+
+  return (
+    <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
+      <div className="w-full flex items-center justify-between gap-3 px-5 py-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left border-b border-gray-200">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-controls={contentId}
+          className="flex items-center gap-3 min-w-0 flex-1"
+        >
+          <div className="min-w-0">
+            <div className="font-bold text-gray-900 text-sm sm:text-base truncate">{title}</div>
+          </div>
+          <span className="text-gray-600 font-semibold text-sm shrink-0" aria-hidden="true">
+            {open ? '▼' : '▶'}
+          </span>
+        </button>
+
+        {headerRight && (
+          <div className="flex items-center gap-3 shrink-0 text-gray-600">
+            {headerRight}
+          </div>
+        )}
+      </div>
+
+      <div
+        id={contentId}
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+      >
+        <div className="overflow-hidden">
+          <div className={`px-5 py-4 ${open ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`}>
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function AdminForm(
+  {
+    config,
+    maskedApiKey,
+    maskedResendKey,
+    inventoryCount,
+    visibleSections,
+    embedded = false,
+    showHeader = true,
+    headerTitle = 'Widget Settings',
+    headerSubtitle = 'Configure your AI chat widget and manage your rental inventory.',
+    showUpsellBanner = true,
+    showSetupChecklist = true,
+    showLeadsPanel = true,
+    showFooter = true,
+    showSaveAndEmbed = true,
+  }: {
+    config: Config
+    maskedApiKey?: string
+    maskedResendKey?: string
+    inventoryCount?: number
+    visibleSections?: AdminSectionId[]
+    embedded?: boolean
+    showHeader?: boolean
+    headerTitle?: string
+    headerSubtitle?: string
+    showUpsellBanner?: boolean
+    showSetupChecklist?: boolean
+    showLeadsPanel?: boolean
+    showFooter?: boolean
+    showSaveAndEmbed?: boolean
+  }
+) {
   const router = useRouter()
   const companyId = config.id
   const [companyName, setCompanyName] = useState(config.name)
@@ -85,8 +206,8 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
   const [manualItems, setManualItems] = useState<ParsedItem[]>([])
   const [manualForm, setManualForm] = useState({ name: '', price: '', category: 'Inflatables', description: '', tags: '' })
 
-  // API key section
-  const [apiProvider, setApiProvider] = useState<'anthropic' | 'openai'>(config.apiProvider || 'anthropic')
+  // API key section (Anthropic only)
+  const apiProvider: 'anthropic' = 'anthropic'
   const [newApiKey, setNewApiKey] = useState('')
   const [apiKeyTesting, setApiKeyTesting] = useState(false)
   const [apiKeyTestResult, setApiKeyTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
@@ -101,6 +222,43 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
   const [resendSaving, setResendSaving] = useState(false)
   const [resendError, setResendError] = useState('')
   const [resendSuccess, setResendSuccess] = useState(false)
+
+  // Integrations — InflatableOffice (Redis-backed)
+  const [ioStatusLoading, setIoStatusLoading] = useState(true)
+  const [ioConnected, setIoConnected] = useState(false)
+  const [ioLastSyncedAt, setIoLastSyncedAt] = useState<string | null>(null)
+  const [ioItemCount, setIoItemCount] = useState<number | null>(null)
+  const [ioApiKey, setIoApiKey] = useState('')
+  const [ioConnecting, setIoConnecting] = useState(false)
+  const [ioResyncing, setIoResyncing] = useState(false)
+  const [ioDisconnecting, setIoDisconnecting] = useState(false)
+  const [ioError, setIoError] = useState('')
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const toastTimerRef = useRef<number | null>(null)
+
+  const [openSections, setOpenSections] = useState<Record<AdminSectionId, boolean>>(() => {
+    if (typeof window === 'undefined') return DEFAULT_SECTION_OPEN
+    try {
+      const raw = window.localStorage.getItem(ADMIN_SECTIONS_STORAGE_KEY)
+      if (!raw) return DEFAULT_SECTION_OPEN
+      const parsed = JSON.parse(raw) as Partial<Record<AdminSectionId, boolean>>
+      return { ...DEFAULT_SECTION_OPEN, ...parsed }
+    } catch {
+      return DEFAULT_SECTION_OPEN
+    }
+  })
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(ADMIN_SECTIONS_STORAGE_KEY, JSON.stringify(openSections))
+    } catch {
+      // ignore
+    }
+  }, [openSections])
+
+  const toggleSection = (id: AdminSectionId) => {
+    setOpenSections(prev => ({ ...prev, [id]: !prev[id] }))
+  }
 
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<SetupResult | null>(null)
@@ -253,7 +411,7 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
       const res = await fetch('/api/test-api-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: apiProvider, apiKey: newApiKey }),
+        body: JSON.stringify({ apiKey: newApiKey }),
       })
       const data = await res.json()
       setApiKeyTestResult(data.valid ? { ok: true, msg: 'Key is valid!' } : { ok: false, msg: data.error })
@@ -270,18 +428,23 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
     setApiKeyError('')
     setApiKeySuccess(false)
     try {
+      console.log('[ai-key-ui] save POST anthropic apiKeyLen=', newApiKey.length)
       const res = await fetch('/api/update-api-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: apiProvider, apiKey: newApiKey }),
+        body: JSON.stringify({ apiKey: newApiKey }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to save')
       setApiKeySuccess(true)
       setNewApiKey('')
       setApiKeyTestResult(null)
+      showToast({ type: 'success', message: 'AI API key saved.' })
+      router.refresh()
     } catch (err) {
-      setApiKeyError(err instanceof Error ? err.message : 'Something went wrong')
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      setApiKeyError(msg)
+      showToast({ type: 'error', message: msg })
     } finally {
       setApiKeySaving(false)
     }
@@ -329,48 +492,190 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
     }
   }
 
+  const connectInflatableOffice = async () => {
+    if (!ioApiKey.trim()) return
+    setIoConnecting(true)
+    setIoError('')
+    try {
+      console.log('[io-ui] connect POST businessId=', companyId)
+      const res = await fetch('/api/admin/io/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: ioApiKey, businessId: companyId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to connect')
+      setIoApiKey('')
+      showToast({ type: 'success', message: 'InflatableOffice connected and synced.' })
+      await loadIoStatus()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      setIoError(msg)
+      showToast({ type: 'error', message: msg })
+    } finally {
+      setIoConnecting(false)
+    }
+  }
+
+  const resyncInflatableOffice = async () => {
+    setIoResyncing(true)
+    setIoError('')
+    try {
+      console.log('[io-ui] sync POST businessId=', companyId)
+      const res = await fetch('/api/admin/io/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: companyId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to re-sync')
+      showToast({ type: 'success', message: 'InflatableOffice re-sync complete.' })
+      await loadIoStatus()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      setIoError(msg)
+      showToast({ type: 'error', message: msg })
+    } finally {
+      setIoResyncing(false)
+    }
+  }
+
+  const disconnectInflatableOffice = async () => {
+    setIoDisconnecting(true)
+    setIoError('')
+    try {
+      console.log('[io-ui] disconnect POST businessId=', companyId)
+      const res = await fetch('/api/admin/io/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId: companyId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to disconnect')
+      showToast({ type: 'success', message: 'InflatableOffice disconnected.' })
+      await loadIoStatus()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      setIoError(msg)
+      showToast({ type: 'error', message: msg })
+    } finally {
+      setIoDisconnecting(false)
+    }
+  }
+
+  const showToast = (next: { type: 'success' | 'error'; message: string }, durationMs = 4500) => {
+    setToast(next)
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = window.setTimeout(() => setToast(null), durationMs)
+  }
+
+  const loadIoStatus = async () => {
+    setIoStatusLoading(true)
+    try {
+      console.log('[io-ui] status GET businessId=', companyId)
+      const res = await fetch(`/api/admin/io/status?businessId=${encodeURIComponent(companyId)}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to load status')
+      setIoConnected(!!data.connected)
+      setIoLastSyncedAt(data.lastSynced ?? null)
+      setIoItemCount(typeof data.itemCount === 'number' ? data.itemCount : Number(data.itemCount) || 0)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load InflatableOffice status'
+      setIoError(msg)
+      setIoConnected(false)
+      setIoLastSyncedAt(null)
+      setIoItemCount(null)
+    } finally {
+      setIoStatusLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadIoStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleLogout = async () => {
     await fetch('/api/logout', { method: 'POST' })
     router.push('/login')
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto space-y-8">
+  const visible = visibleSections ? new Set<AdminSectionId>(visibleSections) : null
+  const show = (id: AdminSectionId) => (visible ? visible.has(id) : true)
 
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Widget Settings</h1>
-            <p className="text-gray-500 mt-1">Configure your AI chat widget and manage your rental inventory.</p>
+  return (
+    <div className={embedded ? 'space-y-8' : 'min-h-screen bg-gray-50 py-12 px-4'}>
+      <div className={embedded ? 'space-y-8' : 'max-w-2xl mx-auto space-y-8'}>
+        {toast && (
+          <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-[min(520px,calc(100vw-2rem))]">
+            <div className={`rounded-2xl shadow-lg border px-4 py-3 flex items-start gap-3 ${
+              toast.type === 'success'
+                ? 'bg-green-50 border-green-200 text-green-800'
+                : 'bg-red-50 border-red-200 text-red-800'
+            }`}>
+              <div className="mt-0.5">
+                {toast.type === 'success' ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M20 6L9 17l-5-5"/>
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                )}
+              </div>
+              <div className="text-sm font-medium flex-1">{toast.message}</div>
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+                aria-label="Dismiss notification"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            Log out
-          </button>
-        </div>
+        )}
+
+        {showHeader && (
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{headerTitle}</h1>
+              <p className="text-gray-500 mt-1">{headerSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Log out
+            </button>
+          </div>
+        )}
 
         {/* Done-for-you upsell banner */}
-        <div className="bg-[#1E2B3C] rounded-2xl p-5 flex items-center justify-between gap-4">
-          <div>
-            <p className="font-semibold text-white text-sm">Want us to set everything up for you?</p>
-            <p className="text-blue-200 text-xs mt-0.5">We'll configure your widget, load your inventory, and get you live.</p>
+        {showUpsellBanner && (
+          <div className="bg-[#1E2B3C] rounded-2xl p-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold text-white text-sm">Want us to set everything up for you?</p>
+              <p className="text-blue-200 text-xs mt-0.5">We&apos;ll configure your widget, load your inventory, and get you live.</p>
+            </div>
+            <a
+              href="mailto:hello@rentalconciergeai.com?subject=Setup%20Help%20Request"
+              className="shrink-0 bg-[#E8A020] hover:bg-[#d4911c] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors whitespace-nowrap"
+            >
+              Email Us
+            </a>
           </div>
-          <a
-            href="mailto:hello@rentalconciergeai.com?subject=Setup%20Help%20Request"
-            className="shrink-0 bg-[#E8A020] hover:bg-[#d4911c] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors whitespace-nowrap"
-          >
-            Email Us
-          </a>
-        </div>
+        )}
 
         {/* Setup checklist banner — shown until all steps complete */}
-        {(!maskedApiKey || !(inventoryCount ?? 0)) && (
+        {showSetupChecklist && (!maskedApiKey || !(inventoryCount ?? 0)) && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-3">
             <div className="flex items-center gap-2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" className="shrink-0">
@@ -402,59 +707,79 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-8">
 
           {/* Company Info */}
-          <div className="space-y-4">
-            <h2 className="font-semibold text-gray-800">Company Info</h2>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-              <input
-                value={companyName}
-                onChange={e => setCompanyName(e.target.value)}
-                placeholder="Bounce Bros Party Rentals"
-                required
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          {show('company') && (
+          <AccordionSection
+            sectionId="company"
+            title="Company Info"
+            open={!!openSections.company}
+            onToggle={() => toggleSection('company')}
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                <input
+                  value={companyName}
+                  onChange={e => setCompanyName(e.target.value)}
+                  placeholder="Bounce Bros Party Rentals"
+                  required
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Company ID <span className="text-gray-400 font-normal">(fixed — used in your embed code)</span>
+                </label>
+                <input
+                  value={companyId}
+                  readOnly
+                  className="w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-2.5 text-sm font-mono text-gray-500 cursor-not-allowed"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Company ID <span className="text-gray-400 font-normal">(fixed — used in your embed code)</span>
-              </label>
-              <input
-                value={companyId}
-                readOnly
-                className="w-full border border-gray-100 bg-gray-50 rounded-xl px-4 py-2.5 text-sm font-mono text-gray-500 cursor-not-allowed"
-              />
-            </div>
-          </div>
+          </AccordionSection>
+          )}
 
           {/* Brand Colors */}
-          <div className="space-y-4">
-            <h2 className="font-semibold text-gray-800">Brand Colors</h2>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { label: 'Primary (buttons, prices)', value: primaryColor, set: setPrimaryColor },
-                { label: 'Accent (user bubbles)', value: accentColor, set: setAccentColor },
-                { label: 'Dark (header, cart bar)', value: navyColor, set: setNavyColor },
-              ].map(({ label, value, set }) => (
-                <div key={label}>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">{label}</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={value}
-                      onChange={e => set(e.target.value)}
-                      className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
-                    />
-                    <span className="text-xs font-mono text-gray-500">{value}</span>
+          {show('brandColors') && (
+          <AccordionSection
+            sectionId="brandColors"
+            title="Brand Colors"
+            open={!!openSections.brandColors}
+            onToggle={() => toggleSection('brandColors')}
+          >
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { label: 'Primary (buttons, prices)', value: primaryColor, set: setPrimaryColor },
+                  { label: 'Accent (user bubbles)', value: accentColor, set: setAccentColor },
+                  { label: 'Dark (header, cart bar)', value: navyColor, set: setNavyColor },
+                ].map(({ label, value, set }) => (
+                  <div key={label}>
+                    <label className="block text-xs font-medium text-gray-600 mb-2">{label}</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={value}
+                        onChange={e => set(e.target.value)}
+                        className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
+                      />
+                      <span className="text-xs font-mono text-gray-500">{value}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </AccordionSection>
+          )}
 
           {/* Cart Mode */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-gray-800">Add to Cart</h2>
+          {show('cartMode') && (
+          <AccordionSection
+            sectionId="cartMode"
+            title="Add to Cart"
+            open={!!openSections.cartMode}
+            onToggle={() => toggleSection('cartMode')}
+            headerRight={(
               <InfoPopover>
                 <p className="font-semibold text-gray-800">Which mode is right for me?</p>
                 <p><strong>+ Add to Cart</strong> — Best if you use InflatableOffice, HireHop, or any booking software that supports JavaScript events. Requires a developer to connect it.</p>
@@ -462,9 +787,11 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
                 <p><strong>Browse Only</strong> — No buttons at all. Customers browse AI recommendations, then call or email you. Great if you want to keep things simple.</p>
                 <p><strong>Quote List</strong> — Customers build a list of items they&apos;re interested in. The full list is sent with their lead form — perfect if you do custom quotes.</p>
               </InfoPopover>
-            </div>
-            <p className="text-xs text-gray-500">Choose how the widget handles item selection.</p>
-            <div className="space-y-2">
+            )}
+          >
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">Choose how the widget handles item selection.</p>
+              <div className="space-y-2">
               {([
                 { value: 'enabled', label: '+ Add to Cart', desc: 'Fires an event your booking software catches. Best if you have API/integration.' },
                 { value: 'inquire', label: 'Inquire Button', desc: 'Shows an "Inquire" button that links to your contact or booking page.' },
@@ -489,126 +816,140 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
                   </div>
                 </label>
               ))}
-            </div>
-            {cartMode === 'inquire' && (
-              <div className="mt-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Inquiry URL</label>
-                <input
-                  type="url"
-                  value={cartInquireUrl}
-                  onChange={e => setCartInquireUrl(e.target.value)}
-                  placeholder="https://yourdomain.com/contact"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
               </div>
-            )}
-          </div>
+              {cartMode === 'inquire' && (
+                <div className="mt-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Inquiry URL</label>
+                  <input
+                    type="url"
+                    value={cartInquireUrl}
+                    onChange={e => setCartInquireUrl(e.target.value)}
+                    placeholder="https://yourdomain.com/contact"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+            </div>
+          </AccordionSection>
+          )}
 
           {/* Rules */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="font-semibold text-gray-800">Inventory Rules</h2>
-                  <InfoPopover>
-                    <p className="font-semibold text-gray-800">What are rules?</p>
-                    <p>Rules automatically filter your inventory based on keywords in the customer&apos;s conversation.</p>
-                    <p><strong>Example:</strong> If a customer mentions &quot;school&quot; or &quot;church&quot;, show only items tagged <code className="bg-gray-100 px-1 rounded">tssa</code> (TSSA-certified equipment required for public events).</p>
-                    <p><strong>Trigger Keywords</strong> — words that activate the rule (e.g. school, church, corporate).</p>
-                    <p><strong>Required Tags</strong> — only inventory items with these tags will be shown when the rule triggers.</p>
-                    <p>Tag your inventory items in the CSV using the <code className="bg-gray-100 px-1 rounded">tags</code> column, separated by semicolons.</p>
-                  </InfoPopover>
+          {show('inventoryRules') && (
+          <AccordionSection
+            sectionId="inventoryRules"
+            title="Inventory Rules"
+            open={!!openSections.inventoryRules}
+            onToggle={() => toggleSection('inventoryRules')}
+            headerRight={(
+              <InfoPopover>
+                <p className="font-semibold text-gray-800">What are rules?</p>
+                <p>Rules automatically filter your inventory based on keywords in the customer&apos;s conversation.</p>
+                <p><strong>Example:</strong> If a customer mentions &quot;school&quot; or &quot;church&quot;, show only items tagged <code className="bg-gray-100 px-1 rounded">tssa</code> (TSSA-certified equipment required for public events).</p>
+                <p><strong>Trigger Keywords</strong> — words that activate the rule (e.g. school, church, corporate).</p>
+                <p><strong>Required Tags</strong> — only inventory items with these tags will be shown when the rule triggers.</p>
+                <p>Tag your inventory items in the CSV using the <code className="bg-gray-100 px-1 rounded">tags</code> column, separated by semicolons.</p>
+              </InfoPopover>
+            )}
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-gray-500">
+                    Auto-filter inventory based on event type. e.g. only show TSSA-certified items for school/church events.
+                  </p>
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Auto-filter inventory based on event type. e.g. only show TSSA-certified items for school/church events.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={addRule}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50 transition-colors"
-              >
-                + Add Rule
-              </button>
-            </div>
-
-            {rules.length === 0 && (
-              <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl">
-                <p className="text-sm text-gray-400">No rules yet.</p>
                 <button
                   type="button"
-                  onClick={() => setRules(DEFAULT_RULES)}
-                  className="text-xs text-blue-500 hover:underline mt-1"
+                  onClick={addRule}
+                  className="shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50 transition-colors"
                 >
-                  Load TSSA example rule
+                  + Add Rule
                 </button>
               </div>
-            )}
 
-            {rules.map((rule, i) => (
-              <div key={i} className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Rule {i + 1}</span>
+              {rules.length === 0 && (
+                <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl">
+                  <p className="text-sm text-gray-400">No rules yet.</p>
                   <button
                     type="button"
-                    onClick={() => removeRule(i)}
-                    className="text-gray-400 hover:text-red-500 transition-colors"
+                    onClick={() => setRules(DEFAULT_RULES)}
+                    className="text-xs text-blue-500 hover:underline mt-1"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
+                    Load TSSA example rule
                   </button>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Rule Name</label>
-                  <input
-                    value={rule.name}
-                    onChange={e => updateRule(i, 'name', e.target.value)}
-                    placeholder="TSSA Certified Only"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+              )}
+
+              {rules.map((rule, i) => (
+                <div key={i} className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Rule {i + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeRule(i)}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Rule Name</label>
+                    <input
+                      value={rule.name}
+                      onChange={e => updateRule(i, 'name', e.target.value)}
+                      placeholder="TSSA Certified Only"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Trigger Keywords <span className="font-normal text-gray-400">(comma-separated)</span>
+                    </label>
+                    <input
+                      value={rule.triggers}
+                      onChange={e => updateRule(i, 'triggers', e.target.value)}
+                      placeholder="church, school, corporate, company picnic"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Required Tags <span className="font-normal text-gray-400">(comma-separated)</span>
+                    </label>
+                    <input
+                      value={rule.requiredTags}
+                      onChange={e => updateRule(i, 'requiredTags', e.target.value)}
+                      placeholder="tssa"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Message to Customer
+                    </label>
+                    <input
+                      value={rule.message}
+                      onChange={e => updateRule(i, 'message', e.target.value)}
+                      placeholder="For school and corporate events we only show TSSA-certified equipment"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Trigger Keywords <span className="font-normal text-gray-400">(comma-separated)</span>
-                  </label>
-                  <input
-                    value={rule.triggers}
-                    onChange={e => updateRule(i, 'triggers', e.target.value)}
-                    placeholder="church, school, corporate, company picnic"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Required Tags <span className="font-normal text-gray-400">(comma-separated)</span>
-                  </label>
-                  <input
-                    value={rule.requiredTags}
-                    onChange={e => updateRule(i, 'requiredTags', e.target.value)}
-                    placeholder="tssa"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Message to Customer
-                  </label>
-                  <input
-                    value={rule.message}
-                    onChange={e => updateRule(i, 'message', e.target.value)}
-                    placeholder="For school and corporate events we only show TSSA-certified equipment"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </AccordionSection>
+          )}
 
           {/* GHL Webhook */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-gray-800">Go HighLevel Webhook <span className="text-gray-400 font-normal text-sm">(optional)</span></h2>
+          {show('ghlWebhook') && (
+          <AccordionSection
+            sectionId="ghlWebhook"
+            title="Go HighLevel Webhook (optional)"
+            open={!!openSections.ghlWebhook}
+            onToggle={() => toggleSection('ghlWebhook')}
+            headerRight={(
               <InfoPopover>
                 <p className="font-semibold text-gray-800">How to get your GHL webhook URL</p>
                 <ol className="list-decimal list-inside space-y-1.5 text-xs">
@@ -620,23 +961,31 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
                 </ol>
                 <p className="text-xs mt-1">The widget will send: name, phone, email, event date, event description, and interested items.</p>
               </InfoPopover>
+            )}
+          >
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500">
+                When a customer fills out the &quot;Check Availability&quot; form in the widget, we POST their name, phone, event description, and interested items to this URL.
+              </p>
+              <input
+                type="url"
+                value={webhookUrl}
+                onChange={e => setWebhookUrl(e.target.value)}
+                placeholder="https://services.leadconnectorhq.com/hooks/..."
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
-            <p className="text-xs text-gray-500">
-              When a customer fills out the &quot;Check Availability&quot; form in the widget, we POST their name, phone, event description, and interested items to this URL.
-            </p>
-            <input
-              type="url"
-              value={webhookUrl}
-              onChange={e => setWebhookUrl(e.target.value)}
-              placeholder="https://services.leadconnectorhq.com/hooks/..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          </AccordionSection>
+          )}
 
           {/* Custom AI Instructions */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-gray-800">Custom AI Instructions <span className="text-gray-400 font-normal text-sm">(optional)</span></h2>
+          {show('customAiInstructions') && (
+          <AccordionSection
+            sectionId="customAiInstructions"
+            title="Custom AI Instructions (optional)"
+            open={!!openSections.customAiInstructions}
+            onToggle={() => toggleSection('customAiInstructions')}
+            headerRight={(
               <InfoPopover>
                 <p className="font-semibold text-gray-800">What to put here</p>
                 <p>Anything you want the AI to always know or say. Examples:</p>
@@ -649,7 +998,8 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
                 </ul>
                 <p className="text-xs text-gray-500 mt-1">The AI will follow these instructions in every conversation.</p>
               </InfoPopover>
-            </div>
+            )}
+          >
             <textarea
               value={customInstructions}
               onChange={e => setCustomInstructions(e.target.value)}
@@ -657,35 +1007,34 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
               rows={4}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-700 placeholder:text-gray-400"
             />
-          </div>
+          </AccordionSection>
+          )}
 
           {/* API Key */}
-          <div className="space-y-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-gray-800">AI API Key</h2>
-                <InfoPopover>
-                  <p className="font-semibold text-gray-800">How to get your API key</p>
-                  <p><strong>Anthropic (Claude):</strong></p>
-                  <ol className="list-decimal list-inside space-y-1 text-xs">
-                    <li>Go to <strong>console.anthropic.com</strong></li>
-                    <li>Sign in or create a free account</li>
-                    <li>Click <strong>API Keys → Create Key</strong></li>
-                    <li>Copy the key (starts with <code className="bg-gray-100 px-1 rounded">sk-ant-</code>)</li>
-                  </ol>
-                  <p className="mt-1"><strong>OpenAI (ChatGPT):</strong></p>
-                  <ol className="list-decimal list-inside space-y-1 text-xs">
-                    <li>Go to <strong>platform.openai.com</strong></li>
-                    <li>Click your profile → <strong>API Keys → Create new</strong></li>
-                    <li>Copy the key (starts with <code className="bg-gray-100 px-1 rounded">sk-</code>)</li>
-                  </ol>
-                  <p className="text-xs mt-1 text-gray-500">Your key is encrypted with AES-256 and never stored in plaintext.</p>
-                </InfoPopover>
-              </div>
-              <p className="text-xs text-gray-500 mt-0.5">
+          {show('aiApiKey') && (
+          <AccordionSection
+            sectionId="aiApiKey"
+            title="AI API Key"
+            open={!!openSections.aiApiKey}
+            onToggle={() => toggleSection('aiApiKey')}
+            headerRight={(
+              <InfoPopover>
+                <p className="font-semibold text-gray-800">How to get your API key</p>
+                <p><strong>Anthropic (Claude):</strong></p>
+                <ol className="list-decimal list-inside space-y-1 text-xs">
+                  <li>Go to <strong>console.anthropic.com</strong></li>
+                  <li>Sign in or create a free account</li>
+                  <li>Click <strong>API Keys → Create Key</strong></li>
+                  <li>Copy the key (starts with <code className="bg-gray-100 px-1 rounded">sk-ant-</code>)</li>
+                </ol>
+                <p className="text-xs mt-1 text-gray-500">Your key is encrypted with AES-256 and never stored in plaintext.</p>
+              </InfoPopover>
+            )}
+          >
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">
                 Your key is encrypted with AES-256 and never stored in plaintext.
               </p>
-            </div>
 
             {maskedApiKey && (
               <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
@@ -693,32 +1042,20 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
                   <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
                 <span className="text-xs font-mono text-gray-600">Current key: {maskedApiKey}</span>
-                <span className="ml-auto text-xs text-gray-400">{config.apiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}</span>
+                <span className="ml-auto text-xs text-gray-400">Anthropic</span>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">AI Provider</label>
-              <select
-                value={apiProvider}
-                onChange={e => { setApiProvider(e.target.value as 'anthropic' | 'openai'); setApiKeyTestResult(null) }}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="anthropic">Anthropic (Claude)</option>
-                <option value="openai">OpenAI (ChatGPT)</option>
-              </select>
-            </div>
-
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {apiProvider === 'anthropic' ? 'Anthropic' : 'OpenAI'} API Key
+                Anthropic API Key
               </label>
               <div className="flex gap-2">
                 <input
                   type="password"
                   value={newApiKey}
                   onChange={e => { setNewApiKey(e.target.value); setApiKeyTestResult(null); setApiKeySuccess(false) }}
-                  placeholder={apiProvider === 'anthropic' ? 'sk-ant-...' : 'sk-...'}
+                  placeholder="sk-ant-..."
                   className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
@@ -755,29 +1092,35 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
             >
               {apiKeySaving ? 'Saving...' : 'Save New Key'}
             </button>
-          </div>
+            </div>
+          </AccordionSection>
+          )}
 
           {/* Resend Email Key */}
-          <div className="space-y-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-gray-800">Lead Email Notifications</h2>
-                <InfoPopover>
-                  <p className="font-semibold text-gray-800">How to get your Resend API key</p>
-                  <ol className="list-decimal list-inside space-y-1.5 text-xs">
-                    <li>Go to <strong>resend.com</strong> and create a free account</li>
-                    <li>From the dashboard, click <strong>API Keys → Create API Key</strong></li>
-                    <li>Give it a name (e.g. &quot;Event Concierge&quot;)</li>
-                    <li>Copy the key (starts with <code className="bg-gray-100 px-1 rounded">re_</code>)</li>
-                    <li>Paste it below and click Save</li>
-                  </ol>
-                  <p className="text-xs mt-1 text-gray-500">Free tier includes 3,000 emails/month. Lead notifications go to your signup email address.</p>
-                </InfoPopover>
-              </div>
-              <p className="text-xs text-gray-500 mt-0.5">
+          {show('leadEmailNotifications') && (
+          <AccordionSection
+            sectionId="leadEmailNotifications"
+            title="Lead Email Notifications"
+            open={!!openSections.leadEmailNotifications}
+            onToggle={() => toggleSection('leadEmailNotifications')}
+            headerRight={(
+              <InfoPopover>
+                <p className="font-semibold text-gray-800">How to get your Resend API key</p>
+                <ol className="list-decimal list-inside space-y-1.5 text-xs">
+                  <li>Go to <strong>resend.com</strong> and create a free account</li>
+                  <li>From the dashboard, click <strong>API Keys → Create API Key</strong></li>
+                  <li>Give it a name (e.g. &quot;Event Concierge&quot;)</li>
+                  <li>Copy the key (starts with <code className="bg-gray-100 px-1 rounded">re_</code>)</li>
+                  <li>Paste it below and click Save</li>
+                </ol>
+                <p className="text-xs mt-1 text-gray-500">Free tier includes 3,000 emails/month. Lead notifications go to your signup email address.</p>
+              </InfoPopover>
+            )}
+          >
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">
                 Get emailed instantly when a customer submits the lead form. Uses your own Resend account — get a free key at resend.com.
               </p>
-            </div>
 
             {maskedResendKey ? (
               <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
@@ -840,16 +1183,129 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
             >
               {resendSaving ? 'Saving...' : 'Save Resend Key'}
             </button>
-          </div>
+            </div>
+          </AccordionSection>
+          )}
+
+          {/* Integrations */}
+          {show('integrations') && (
+          <AccordionSection
+            sectionId="integrations"
+            title="Integrations"
+            open={!!openSections.integrations}
+            onToggle={() => toggleSection('integrations')}
+          >
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">Connect your booking software to keep inventory and pricing in sync.</p>
+
+              <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 11a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>
+                      <path d="M14 7a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>
+                      <path d="M14 15a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>
+                      <path d="M10 12h4"/>
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-gray-900 text-sm">InflatableOffice</span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                        ioConnected ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}>
+                        {ioConnected ? 'Connected' : 'Not Connected'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {ioConnected
+                        ? (ioStatusLoading ? 'Checking status…' : `Synced items: ${ioItemCount ?? 0}`)
+                        : 'Paste your IO API key to connect and sync.'}
+                    </div>
+                  </div>
+                </div>
+
+                {ioConnected && (
+                  <button
+                    type="button"
+                    onClick={disconnectInflatableOffice}
+                    disabled={ioDisconnecting}
+                    className="shrink-0 text-xs font-semibold text-red-600 hover:text-red-700 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 disabled:opacity-40 transition-colors"
+                  >
+                    {ioDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-white border border-gray-200 rounded-xl px-4 py-3">
+                  <div className="text-xs text-gray-400">Connection status</div>
+                  <div className="text-sm font-semibold text-gray-800 mt-0.5">{ioConnected ? 'Connected' : 'Not Connected'}</div>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-xl px-4 py-3">
+                  <div className="text-xs text-gray-400">Last synced</div>
+                  <div className="text-sm font-semibold text-gray-800 mt-0.5">
+                    {ioLastSyncedAt ? new Date(ioLastSyncedAt).toLocaleString() : '—'}
+                  </div>
+                </div>
+              </div>
+
+              {!ioConnected ? (
+                <div className="space-y-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">InflatableOffice API Key</label>
+                    <input
+                      type="password"
+                      value={ioApiKey}
+                      onChange={e => { setIoApiKey(e.target.value); setIoError('') }}
+                      placeholder="Paste your IO API key"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {ioError && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">{ioError}</div>}
+                  <button
+                    type="button"
+                    onClick={connectInflatableOffice}
+                    disabled={!ioApiKey.trim() || ioConnecting}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-40 transition-colors"
+                  >
+                    {ioConnecting ? 'Connecting...' : 'Connect & Sync'}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                  {ioError && <div className="w-full bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">{ioError}</div>}
+                  <button
+                    type="button"
+                    onClick={resyncInflatableOffice}
+                    disabled={ioResyncing}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-600 text-white text-sm font-extrabold hover:bg-blue-700 disabled:opacity-40 transition-colors shadow-sm"
+                  >
+                    {ioResyncing ? 'Re-syncing...' : 'Re-sync Now'}
+                  </button>
+                </div>
+              )}
+            </div>
+            </div>
+          </AccordionSection>
+          )}
 
           {/* Inventory — tabbed */}
-          <div className="space-y-3">
-            <div>
-              <h2 className="font-semibold text-gray-800">
-                Inventory <span className="text-gray-400 font-normal text-sm">(optional — skip to update settings only)</span>
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">Choose how you&apos;d like to add your rental items.</p>
-            </div>
+          {show('inventory') && (
+          <AccordionSection
+            sectionId="inventory"
+            title="Inventory"
+            open={!!openSections.inventory}
+            onToggle={() => toggleSection('inventory')}
+          >
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">
+                Choose how you&apos;d like to add your rental items. <span className="text-gray-400">(optional — skip to update settings only)</span>
+              </p>
+              <p className="text-xs text-gray-500">
+                Using InflatableOffice? Set your IO API key under <a className="font-semibold underline underline-offset-2 hover:text-gray-700" href="/admin/integrations">Integrations</a>, then come back here and click <span className="font-semibold">Re-sync Now</span>.
+              </p>
 
             {/* Tab bar */}
             <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
@@ -1084,26 +1540,30 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
                 {itemCount} item{itemCount !== 1 ? 's' : ''} ready to save
               </div>
             )}
-          </div>
+            </div>
+          </AccordionSection>
+          )}
 
           {/* Inventory Editor */}
-          <InventoryEditor />
+          {show('inventory') && <InventoryEditor />}
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">{error}</div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl text-white font-semibold text-sm bg-gray-900 hover:bg-gray-800 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Saving...' : 'Save & Generate Embed Code'}
-          </button>
+          {showSaveAndEmbed && (
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl text-white font-semibold text-sm bg-gray-900 hover:bg-gray-800 disabled:opacity-50 transition-colors"
+            >
+              {loading ? 'Saving...' : 'Save & Generate Embed Code'}
+            </button>
+          )}
         </form>
 
         {/* Result */}
-        {result && (
+        {showSaveAndEmbed && result && (
           <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
@@ -1163,7 +1623,16 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
         )}
 
         {/* Leads Panel */}
-        <LeadsPanel />
+        {showLeadsPanel && show('leads') && (
+          <AccordionSection
+            sectionId="leads"
+            title="Leads"
+            open={!!openSections.leads}
+            onToggle={() => toggleSection('leads')}
+          >
+            <LeadsPanel />
+          </AccordionSection>
+        )}
 
         <div className="bg-amber-50 border border-amber-100 rounded-2xl px-5 py-4 text-sm text-amber-800">
           <strong>Demo:</strong> Pre-loaded inventory under company ID <code className="bg-amber-100 px-1 rounded">demo</code> with a TSSA rule active.
@@ -1171,17 +1640,19 @@ export default function AdminForm({ config, maskedApiKey, maskedResendKey, inven
         </div>
 
         {/* Support footer */}
-        <div className="border-t border-gray-100 pt-6 text-center text-sm text-gray-400">
-          Need help?{' '}
-          <a href="mailto:hello@thepartyrentaltoolkit.com" className="text-[#B03A3A] hover:underline font-medium">
-            hello@thepartyrentaltoolkit.com
-          </a>
-          <span className="mx-2">·</span>
-          Event Concierge is a product of{' '}
-          <a href="https://thepartyrentaltoolkit.com" target="_blank" rel="noopener noreferrer" className="text-[#1E2B3C] hover:underline font-medium">
-            The Party Rental Toolkit
-          </a>
-        </div>
+        {showFooter && (
+          <div className="border-t border-gray-100 pt-6 text-center text-sm text-gray-400">
+            Need help?{' '}
+            <a href="mailto:hello@thepartyrentaltoolkit.com" className="text-[#B03A3A] hover:underline font-medium">
+              hello@thepartyrentaltoolkit.com
+            </a>
+            <span className="mx-2">·</span>
+            Event Concierge is a product of{' '}
+            <a href="https://thepartyrentaltoolkit.com" target="_blank" rel="noopener noreferrer" className="text-[#1E2B3C] hover:underline font-medium">
+              The Party Rental Toolkit
+            </a>
+          </div>
+        )}
 
       </div>
     </div>
@@ -1202,6 +1673,8 @@ interface EditableItem {
   guestCapacity: number
   image: string
   url?: string
+  source?: string
+  sourceId?: string | number
 }
 
 function InventoryEditor() {
@@ -1329,9 +1802,16 @@ function InventoryEditor() {
                       <polyline points="9 18 15 12 9 6"/>
                     </svg>
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-800 truncate block">
-                        {item.name || <span className="text-gray-400 italic">Untitled item</span>}
-                      </span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-medium text-gray-800 truncate block min-w-0">
+                          {item.name || <span className="text-gray-400 italic">Untitled item</span>}
+                        </span>
+                        {item.source === 'inflatable_office' && (
+                          <span className="shrink-0 text-[10px] font-extrabold tracking-wide px-1.5 py-0.5 rounded-md border border-blue-200 bg-blue-50 text-blue-700">
+                            IO
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-gray-400">
                         {item.category}
                         {item.tags ? ` · ${item.tags}` : ''}
@@ -1352,12 +1832,18 @@ function InventoryEditor() {
                   {/* Expanded edit fields */}
                   {expandedId === item.id && (
                     <div className="px-4 pb-4 pt-2 bg-gray-50 border-t border-gray-100 grid grid-cols-2 gap-3">
+                      {item.source === 'inflatable_office' && (
+                        <div className="col-span-2 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-800">
+                          <strong>Synced from InflatableOffice</strong> — edit in IO dashboard, then click <strong>Re-sync Now</strong>.
+                        </div>
+                      )}
                       <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
                         <input
                           value={item.name}
                           onChange={e => update(item.id, 'name', e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={item.source === 'inflatable_office'}
+                          className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${item.source === 'inflatable_office' ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'}`}
                         />
                       </div>
                       <div>
@@ -1366,7 +1852,8 @@ function InventoryEditor() {
                           type="number" min="0"
                           value={item.price}
                           onChange={e => update(item.id, 'price', e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={item.source === 'inflatable_office'}
+                          className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${item.source === 'inflatable_office' ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'}`}
                         />
                       </div>
                       <div>
@@ -1374,7 +1861,8 @@ function InventoryEditor() {
                         <select
                           value={item.category}
                           onChange={e => update(item.id, 'category', e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={item.source === 'inflatable_office'}
+                          className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${item.source === 'inflatable_office' ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'}`}
                         >
                           {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                         </select>
@@ -1387,7 +1875,8 @@ function InventoryEditor() {
                           value={item.tags}
                           onChange={e => update(item.id, 'tags', e.target.value)}
                           placeholder="tssa; outdoor; water"
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={item.source === 'inflatable_office'}
+                          className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 ${item.source === 'inflatable_office' ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'}`}
                         />
                       </div>
                       <div className="col-span-2">
@@ -1396,28 +1885,32 @@ function InventoryEditor() {
                           value={item.description}
                           onChange={e => update(item.id, 'description', e.target.value)}
                           rows={2}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                          disabled={item.source === 'inflatable_office'}
+                          className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${item.source === 'inflatable_office' ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'}`}
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Min Age</label>
                         <input type="number" min="0" value={item.ageMin}
                           onChange={e => update(item.id, 'ageMin', e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={item.source === 'inflatable_office'}
+                          className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${item.source === 'inflatable_office' ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'}`}
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Max Age</label>
                         <input type="number" min="0" value={item.ageMax}
                           onChange={e => update(item.id, 'ageMax', e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={item.source === 'inflatable_office'}
+                          className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${item.source === 'inflatable_office' ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'}`}
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Guest Capacity</label>
                         <input type="number" min="0" value={item.guestCapacity}
                           onChange={e => update(item.id, 'guestCapacity', e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={item.source === 'inflatable_office'}
+                          className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${item.source === 'inflatable_office' ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'}`}
                         />
                       </div>
                       <div>
@@ -1426,7 +1919,8 @@ function InventoryEditor() {
                           value={item.image}
                           onChange={e => update(item.id, 'image', e.target.value)}
                           placeholder="https://..."
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={item.source === 'inflatable_office'}
+                          className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${item.source === 'inflatable_office' ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'}`}
                         />
                       </div>
                       <div>
@@ -1435,7 +1929,8 @@ function InventoryEditor() {
                           value={item.url || ''}
                           onChange={e => update(item.id, 'url', e.target.value)}
                           placeholder="https://yoursite.com/products/bouncy-castle"
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={item.source === 'inflatable_office'}
+                          className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${item.source === 'inflatable_office' ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'}`}
                         />
                       </div>
                     </div>

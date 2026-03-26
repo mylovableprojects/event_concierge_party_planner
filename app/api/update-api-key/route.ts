@@ -3,7 +3,6 @@ import { verifySession, COOKIE_NAME } from '@/lib/auth'
 import { getCompanyConfig, saveCompanyConfig } from '@/lib/inventory'
 import { encrypt } from '@/lib/encryption'
 import { validateAnthropicKey } from '@/lib/claude'
-import { validateOpenAIKey } from '@/lib/openai-ai'
 
 export async function POST(request: Request) {
   try {
@@ -14,19 +13,19 @@ export async function POST(request: Request) {
     const session = verifySession(token)
     if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { provider, apiKey } = await request.json() as { provider: string; apiKey: string }
+    const { apiKey } = await request.json() as { apiKey: string }
+    console.log('[update-api-key] request body', {
+      apiKey: typeof apiKey === 'string' ? `${apiKey.slice(0, 4)}…(${apiKey.length})` : apiKey,
+      companyId: session.companyId,
+    })
 
-    if (!provider || !apiKey?.trim()) {
-      return Response.json({ error: 'provider and apiKey are required' }, { status: 400 })
-    }
-    if (provider !== 'anthropic' && provider !== 'openai') {
-      return Response.json({ error: 'provider must be "anthropic" or "openai"' }, { status: 400 })
+    if (!apiKey?.trim()) {
+      return Response.json({ error: 'apiKey is required' }, { status: 400 })
     }
 
     // Validate before saving
     try {
-      if (provider === 'anthropic') await validateAnthropicKey(apiKey.trim())
-      else await validateOpenAIKey(apiKey.trim())
+      await validateAnthropicKey(apiKey.trim())
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       return Response.json({ error: `Key validation failed: ${msg}` }, { status: 422 })
@@ -35,15 +34,21 @@ export async function POST(request: Request) {
     const config = await getCompanyConfig(session.companyId)
     if (!config) return Response.json({ error: 'Company not found' }, { status: 404 })
 
+    const redisKey = `company:${config.id}:config`
+    console.log('[update-api-key] writing config to', redisKey)
+
     await saveCompanyConfig({
       ...config,
-      apiProvider: provider as 'anthropic' | 'openai',
+      apiProvider: 'anthropic',
       encryptedApiKey: encrypt(apiKey.trim()),
     })
 
-    return Response.json({ success: true })
+    console.log('[update-api-key] saveCompanyConfig OK', { companyId: config.id, redisKey })
+
+    return Response.json({ success: true }, { status: 200 })
   } catch (err) {
     console.error('Update API key error:', err)
-    return Response.json({ error: 'Something went wrong' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : 'Something went wrong'
+    return Response.json({ error: msg }, { status: 500 })
   }
 }
