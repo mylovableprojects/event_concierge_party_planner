@@ -77,11 +77,11 @@ export default function AdminDashboard(props: Props) {
   const widgetEmbedded = Boolean((config as unknown as { embedVerified?: boolean }).embedVerified)
 
   const steps = [
-    { label: 'Account created', ok: true },
-    { label: 'Company info added', ok: companyInfoAdded },
-    { label: 'Inventory added', ok: inventoryAdded },
-    { label: 'InflatableOffice connected', ok: ioConnected },
-    { label: 'Widget embedded on website', ok: widgetEmbedded },
+    { label: 'Account created', ok: true, href: null },
+    { label: 'Company info added', ok: companyInfoAdded, href: '/admin/widget-settings' },
+    { label: 'Inventory added', ok: inventoryAdded, href: '/admin/inventory' },
+    { label: 'InflatableOffice connected', ok: ioConnected, href: '/admin/integrations' },
+    { label: 'Widget embedded on website', ok: widgetEmbedded, href: '/admin/integrations' },
   ]
 
   const completed = steps.filter(s => s.ok).length
@@ -125,29 +125,33 @@ export default function AdminDashboard(props: Props) {
         <ul className="mt-4 grid sm:grid-cols-2 gap-2">
           {steps.map((s) => (
             <li key={s.label} className="flex items-center gap-2 text-sm">
-              <span aria-hidden="true">{s.ok ? '✅' : '❌'}</span>
-              <span className="text-gray-900 font-semibold">{s.label}</span>
+              <span aria-hidden="true">{s.ok ? '✅' : '⬜'}</span>
+              {!s.ok && s.href ? (
+                <Link href={s.href} className="text-blue-600 font-semibold hover:underline underline-offset-2">
+                  {s.label} →
+                </Link>
+              ) : (
+                <span className={s.ok ? 'text-gray-500 line-through' : 'text-gray-900 font-semibold'}>{s.label}</span>
+              )}
             </li>
           ))}
         </ul>
-
-        {!widgetEmbedded && (
-          <div className="mt-4 text-sm text-gray-600">
-            Tip: copy your embed code from <Link className="font-semibold text-gray-900 underline underline-offset-2" href="/admin#section-integrations">Integrations</Link>.
-          </div>
-        )}
       </section>
 
       {/* B — Stats Row */}
-      <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Inventory Items" value={ioInventoryCount ?? inventoryCount} sub={ioInventoryCount !== null ? 'From InflatableOffice cache' : 'From local inventory'} />
-        <StatCard label="Categories" value={ioCategoriesCount ?? '—'} sub={ioCategoriesCount === null ? 'Connect IO to fetch categories' : 'From InflatableOffice'} />
-        <StatCard
-          label="IO Connection Status"
-          value={<Badge tone={ioBadgeTone}>{ioBadgeText}</Badge>}
-          sub={ioStatus.lastSynced ? <>Last synced {fmtDateTime(ioStatus.lastSynced)}</> : 'No sync yet'}
-        />
-        <StatCard label="Recent Leads (30d)" value={recentLeads30dCount} sub="Saved leads" />
+      <section className={`grid gap-4 ${ioConnected ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2'}`}>
+        <StatCard label="Inventory Items" value={ioInventoryCount ?? inventoryCount} sub="Items your AI can recommend" />
+        {ioConnected && (
+          <StatCard label="Categories" value={ioCategoriesCount ?? '—'} sub="From InflatableOffice" />
+        )}
+        {ioConnected && (
+          <StatCard
+            label="InflatableOffice"
+            value={<Badge tone={ioBadgeTone}>{ioBadgeText}</Badge>}
+            sub={ioStatus.lastSynced ? <>Last synced {fmtDateTime(ioStatus.lastSynced)}</> : 'No sync yet'}
+          />
+        )}
+        <StatCard label="Leads (last 30 days)" value={recentLeads30dCount} sub="Customer inquiries" />
       </section>
 
       {/* C — Widget Preview */}

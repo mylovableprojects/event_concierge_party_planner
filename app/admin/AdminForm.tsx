@@ -905,7 +905,7 @@ export default function AdminForm(
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Trigger Keywords <span className="font-normal text-gray-400">(comma-separated)</span>
+                      When customer mentions <span className="font-normal text-gray-400">(comma-separated words)</span>
                     </label>
                     <input
                       value={rule.triggers}
@@ -916,7 +916,7 @@ export default function AdminForm(
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Required Tags <span className="font-normal text-gray-400">(comma-separated)</span>
+                      Only show items labelled <span className="font-normal text-gray-400">(comma-separated item labels)</span>
                     </label>
                     <input
                       value={rule.requiredTags}
@@ -965,7 +965,7 @@ export default function AdminForm(
           >
             <div className="space-y-2">
               <p className="text-xs text-gray-500">
-                When a customer fills out the &quot;Check Availability&quot; form in the widget, we POST their name, phone, event description, and interested items to this URL.
+                When a customer fills out the &quot;Check Availability&quot; form, we automatically send their name, phone, event description, and interested items to this URL. Great for triggering automations in Go HighLevel.
               </p>
               <input
                 type="url"
@@ -1027,13 +1027,13 @@ export default function AdminForm(
                   <li>Click <strong>API Keys → Create Key</strong></li>
                   <li>Copy the key (starts with <code className="bg-gray-100 px-1 rounded">sk-ant-</code>)</li>
                 </ol>
-                <p className="text-xs mt-1 text-gray-500">Your key is encrypted with AES-256 and never stored in plaintext.</p>
+                <p className="text-xs mt-1 text-gray-500">Your key is securely encrypted and never visible to anyone, including us.</p>
               </InfoPopover>
             )}
           >
             <div className="space-y-3">
               <p className="text-xs text-gray-500">
-                Your key is encrypted with AES-256 and never stored in plaintext.
+                Your key is securely encrypted and never visible to anyone, including us.
               </p>
 
             {maskedApiKey && (
@@ -1561,6 +1561,24 @@ export default function AdminForm(
             </button>
           )}
         </form>
+
+        {/* Sticky save bar — always visible while scrolling */}
+        {showSaveAndEmbed && (
+          <div className="fixed bottom-0 left-0 right-0 md:left-[250px] z-30 bg-white border-t border-gray-200 shadow-lg px-4 py-3 flex items-center justify-between gap-4">
+            <p className="text-sm text-gray-500 hidden sm:block">Remember to save your changes.</p>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                const form = document.querySelector('form')
+                if (form) form.requestSubmit()
+              }}
+              className="ml-auto px-6 py-2.5 rounded-xl text-white font-semibold text-sm bg-gray-900 hover:bg-gray-800 disabled:opacity-50 transition-colors"
+            >
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        )}
 
         {/* Result */}
         {showSaveAndEmbed && result && (
