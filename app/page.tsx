@@ -127,7 +127,7 @@ export default function Home() {
             {/* CTAs */}
             <div className="fade-4 flex flex-col sm:flex-row gap-3 justify-center mb-10">
               <a
-                href="/widget?company=demo"
+                href="/widget?company=redline-inflatables"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="cta-pulse px-7 py-3.5 rounded-xl bg-[#B03A3A] text-white font-semibold text-sm hover:bg-[#9a3232] transition-colors"
@@ -429,7 +429,7 @@ export default function Home() {
         </footer>
 
       {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-      <script src="/embed.js" data-company="demo" />
+      <script src="/embed.js" data-company="redline-inflatables" />
     </>
   )
 }
