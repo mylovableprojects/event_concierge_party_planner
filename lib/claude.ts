@@ -18,6 +18,8 @@ export function buildSystemPrompt(inventory: InventoryItem[], companyName: strin
     `- ID: ${item.id} | ${item.name} | $${item.price} | Category: ${item.category} | Ages: ${item.ageMin}–${item.ageMax} | Capacity: up to ${item.guestCapacity} guests | Tags: ${item.tags.join(', ')}\n  Description: ${item.description}`
   ).join('\n\n')
 
+  const hasPinnedItems = activeRules.some(r => r.pinnedItemIds && r.pinnedItemIds.length > 0)
+
   const rulesSection = activeRules.length > 0
     ? `\nACTIVE FILTERS:\n${activeRules.map(r =>
         `- ${r.name}: ${r.message} (the catalog has already been filtered to only show eligible items)`
@@ -43,16 +45,18 @@ Respond with raw valid JSON only — no markdown, no code fences, no extra text.
 }
 
 RECOMMENDATION RULES:
-- recommendations: 0–3 items. Only include items that are a clear, strong fit.
-- upsells: 0–2 items. Only include if the main recommendations are already solid and the upsell genuinely complements them. An empty upsells array is fine — prefer no upsell over a weak one.
+- recommendations: ${hasPinnedItems ? 'SHOW ALL items in the catalog — the business has hand-picked exactly these items for this event type. Recommend every item in the catalog.' : '0–3 items. Only include items that are a clear, strong fit.'}
+- upsells: ${hasPinnedItems ? '[] — leave empty when showing a pinned selection.' : '0–2 items. Only include if the main recommendations are already solid and the upsell genuinely complements them. An empty upsells array is fine — prefer no upsell over a weak one.'}
 - followUpQuestion: ask one question when confidence is medium or low. Set to null when you have enough to make strong recommendations.
 - Never recommend items outside the catalog. Only use IDs exactly as listed.
-- Do not pad recommendations. Fewer strong picks beat a long weak list.
+${hasPinnedItems ? '- The business has curated this exact list for this event type. Present all items confidently.' : '- Do not pad recommendations. Fewer strong picks beat a long weak list.'}
 
 CONFIDENCE GUIDANCE:
-- High confidence (event type, age, count are clear): recommend 1–3 specific items. Upsells optional.
+${hasPinnedItems
+  ? '- Always show all catalog items — the selection has already been curated by the business for this event type.'
+  : `- High confidence (event type, age, count are clear): recommend 1–3 specific items. Upsells optional.
 - Medium confidence (some details missing): recommend fewer items and ask 1 clarifying question.
-- Low confidence (very vague): skip or minimise recommendations and ask 1 clarifying question first.
+- Low confidence (very vague): skip or minimise recommendations and ask 1 clarifying question first.`}
 
 QUALITY FILTERS — exclude any item that:
 - Does not fit the stated or implied age range
