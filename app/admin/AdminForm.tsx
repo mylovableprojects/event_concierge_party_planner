@@ -8,6 +8,13 @@ interface Rule {
   triggers: string
   requiredTags: string
   message: string
+  pinnedItems: string   // comma-separated item names chosen by admin
+}
+
+interface InventoryOption {
+  id: string
+  name: string
+  category: string
 }
 
 interface ParsedItem {
@@ -49,6 +56,7 @@ const DEFAULT_RULES: Rule[] = [
     triggers: 'church, school, corporate, company picnic, municipality, government, organization, festival, public event',
     requiredTags: 'tssa',
     message: 'For school, church, and corporate events we only show TSSA-certified equipment',
+    pinnedItems: '',
   },
 ]
 
@@ -192,8 +200,25 @@ export default function AdminForm(
       triggers: r.triggers.join(', '),
       requiredTags: r.requiredTags.join(', '),
       message: r.message,
+      pinnedItems: (r as { pinnedItemIds?: string[] }).pinnedItemIds?.join(', ') ?? '',
     }))
   )
+
+  // Inventory options for the rule item picker
+  const [inventoryOptions, setInventoryOptions] = useState<InventoryOption[]>([])
+  useEffect(() => {
+    fetch('/api/inventory')
+      .then(r => r.json())
+      .then(data => {
+        const items = data.inventory ?? data.items ?? []
+        setInventoryOptions(items.map((item: { id: string; name: string; category: string }) => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+        })))
+      })
+      .catch(() => {/* non-critical */})
+  }, [])
 
   // Inventory input
   const [inventoryTab, setInventoryTab] = useState<InventoryTab>('csv')
@@ -265,7 +290,7 @@ export default function AdminForm(
   const [error, setError] = useState('')
   const imageInputRef = useRef<HTMLInputElement>(null)
 
-  const addRule = () => setRules(prev => [...prev, { name: '', triggers: '', requiredTags: '', message: '' }])
+  const addRule = () => setRules(prev => [...prev, { name: '', triggers: '', requiredTags: '', message: '', pinnedItems: '' }])
   const removeRule = (i: number) => setRules(prev => prev.filter((_, idx) => idx !== i))
   const updateRule = (i: number, field: keyof Rule, value: string) =>
     setRules(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r))
@@ -332,13 +357,23 @@ export default function AdminForm(
     setLoading(true)
 
     const serializedRules = rules
-      .filter(r => r.name && r.triggers && r.requiredTags)
-      .map(r => ({
-        name: r.name,
-        triggers: r.triggers.split(',').map(t => t.trim()).filter(Boolean),
-        requiredTags: r.requiredTags.split(',').map(t => t.trim()).filter(Boolean),
-        message: r.message,
-      }))
+      .filter(r => r.name && r.triggers)
+      .map(r => {
+        // Match pinned item names back to IDs
+        const pinnedNames = r.pinnedItems.split(',').map(s => s.trim()).filter(Boolean)
+        const pinnedItemIds = pinnedNames.length > 0
+          ? inventoryOptions
+              .filter(opt => pinnedNames.some(n => n.toLowerCase() === opt.name.toLowerCase()))
+              .map(opt => opt.id)
+          : []
+        return {
+          name: r.name,
+          triggers: r.triggers.split(',').map(t => t.trim()).filter(Boolean),
+          requiredTags: r.requiredTags.split(',').map(t => t.trim()).filter(Boolean),
+          message: r.message,
+          ...(pinnedItemIds.length > 0 ? { pinnedItemIds } : {}),
+        }
+      })
 
     const fd = new FormData()
     fd.append('companyId', companyId)
@@ -916,7 +951,7 @@ export default function AdminForm(
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Only show items labelled <span className="font-normal text-gray-400">(comma-separated item labels)</span>
+                      Only show items labelled <span className="font-normal text-gray-400">(comma-separated item labels — ignored if you pick specific items below)</span>
                     </label>
                     <input
                       value={rule.requiredTags}
@@ -925,6 +960,57 @@ export default function AdminForm(
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+
+                  {/* Pinned items picker */}
+                  <div className="border border-blue-100 bg-blue-50 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-blue-800">
+                        Or: show only these specific items
+                        <span className="font-normal text-blue-600 ml-1">(overrides label filter above)</span>
+                      </label>
+                      {rule.pinnedItems && (
+                        <button type="button" onClick={() => updateRule(i, 'pinnedItems', '')} className="text-xs text-blue-500 hover:text-red-500">
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    {inventoryOptions.length > 0 ? (
+                      <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                        {inventoryOptions.map(opt => {
+                          const selected = rule.pinnedItems.split(',').map(s => s.trim().toLowerCase()).includes(opt.name.toLowerCase())
+                          return (
+                            <label key={opt.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-xs transition-colors ${selected ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-blue-100'}`}>
+                              <input
+                                type="checkbox"
+                                className="sr-only"
+                                checked={selected}
+                                onChange={() => {
+                                  const current = rule.pinnedItems.split(',').map(s => s.trim()).filter(Boolean)
+                                  const next = selected
+                                    ? current.filter(n => n.toLowerCase() !== opt.name.toLowerCase())
+                                    : [...current, opt.name]
+                                  updateRule(i, 'pinnedItems', next.join(', '))
+                                }}
+                              />
+                              <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${selected ? 'bg-white border-white' : 'border-gray-300'}`}>
+                                {selected && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="3.5"><path d="M20 6L9 17l-5-5"/></svg>}
+                              </span>
+                              <span className="truncate font-medium">{opt.name}</span>
+                              <span className={`ml-auto shrink-0 ${selected ? 'text-blue-200' : 'text-gray-400'}`}>{opt.category}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-blue-600">Upload your inventory first to pick specific items here.</p>
+                    )}
+                    {rule.pinnedItems && (
+                      <p className="text-xs text-blue-700 font-medium">
+                        Showing: {rule.pinnedItems}
+                      </p>
+                    )}
+                  </div>
+
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Message to Customer

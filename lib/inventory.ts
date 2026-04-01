@@ -30,6 +30,7 @@ export interface Rule {
   triggers: string[]
   requiredTags: string[]
   message: string
+  pinnedItemIds?: string[]  // when set, show only these items instead of tag filtering
 }
 
 export interface CompanyConfig {
@@ -237,7 +238,19 @@ export function applyRules(
     return { activeRules: [], filteredInventory: inventory }
   }
 
-  // Each active rule requires ALL of its requiredTags to be present on an item
+  // Rules with pinnedItemIds take priority — show only those specific items
+  const pinnedIds = activeRules
+    .filter(rule => rule.pinnedItemIds && rule.pinnedItemIds.length > 0)
+    .flatMap(rule => rule.pinnedItemIds!)
+
+  if (pinnedIds.length > 0) {
+    const pinnedInventory = inventory.filter(item => pinnedIds.includes(item.id))
+    if (pinnedInventory.length > 0) {
+      return { activeRules, filteredInventory: pinnedInventory }
+    }
+  }
+
+  // Otherwise fall back to tag filtering
   const filteredInventory = inventory.filter(item => {
     const itemTags = item.tags.map(t => t.toLowerCase())
     return activeRules.every(rule =>
