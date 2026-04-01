@@ -323,8 +323,8 @@ function WidgetContent() {
           </div>
         )}
 
-        {/* Check Availability CTA — shown after first recommendations, only if webhook configured */}
-        {hasWebhook && messages.some(m => m.type === 'assistant' && (m as AssistantMessage).recommendations.length > 0) && !loading && (
+        {/* Check Availability CTA — shown after first recommendations */}
+        {messages.some(m => m.type === 'assistant' && (m as AssistantMessage).recommendations.length > 0) && !loading && (
           leadSubmitted ? (
             <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-4 text-center">
               <div className="text-green-700 font-semibold text-sm">You&apos;re all set!</div>
