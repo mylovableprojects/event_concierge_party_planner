@@ -64,7 +64,7 @@ export default async function SettingsPage() {
           Contact us if you need to change your email address or delete your account.
         </div>
         <a
-          href="mailto:support@eventconcierge.ai"
+          href="mailto:hello@thepartyrentaltoolkit.com"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
         >
           Email support →
